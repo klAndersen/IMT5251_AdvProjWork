@@ -1,5 +1,15 @@
-<div class="chatagent_block">
-<p>ChatAgentXBlock: count is now
-    <span class='count'>{self.count}</span> (click me to increment).
-</p>
+<!-- Taken from: http://code.tutsplus.com/tutorials/how-to-create-a-simple-web-based-chat-application--net-5931  -->
+<div id="wrapper">
+    <div id="menu">
+        <p class="welcome">Welcome, <b><!-- add studName here --></b></p>
+        <p class="logout"><a id="exit" href="#">Exit Chat</a></p>
+        <div style="clear:both"></div>
+    </div>
+
+    <div id="chatbox"></div>
+
+    <form name="message" action="">
+        <input name="usermsg" type="text" id="usermsg" size="63" />
+        <input name="submitmsg" type="submit"  id="submitmsg" value="Send" />
+    </form>
 </div>
