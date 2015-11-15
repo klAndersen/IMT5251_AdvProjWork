@@ -1,0 +1,9 @@
+/* CSS for ChatAgentXBlock */
+
+.chatagent_block .count {
+    font-weight: bold;
+}
+
+.chatagent_block p {
+    cursor: pointer;
+}
