@@ -19,18 +19,14 @@ a {
     color:#0000FF;
     text-decoration:none; }
 
-    a:hover { text-decoration:underline; }
+a:hover { text-decoration:underline; }
 
-#wrapper, #loginform {
+#wrapper {
     margin:0 auto;
     padding-bottom:25px;
     background:#EBF4FB;
     width:504px;
     border:1px solid #ACD8F0; }
-
-#loginform { padding-top:18px; }
-
-    #loginform p { margin: 5px; }
 
 #chatbox {
     text-align:left;

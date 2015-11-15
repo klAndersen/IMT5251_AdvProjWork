@@ -2,6 +2,10 @@
 function ChatAgentXBlock(runtime, element) {
 
     $(function ($) {
-        /* Here's where you'd do things on page load. */
+        var outputField = document.getElementById('chatbox');
+        var inputField = document.getElementById('usermsg');
+        inputField.focus();
+         $('chatbox').text('Hello, user');
     });
+
 }
