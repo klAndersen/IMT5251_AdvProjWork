@@ -23,7 +23,7 @@ def package_data(pkg, roots):
 setup(
     name='chatagent-xblock',
     version='0.1',
-    description='ChatBot for answering questions related to programming by using StackOverflow as knowlegde base',
+    description='ChatBot for answering questions related to programming by using StackOverflow as knowledge base',
     packages=[
         'chatagent',
     ],

@@ -16,7 +16,7 @@ function ChatAgentXBlock(runtime, element) {
         });
     }
 
-    invoke('print_table_content', null, function (data) {
+    invoke('print_test_data', null, function (data) {
         console.log("log: " + data['result']);
         $('.chatbox', element).text("Result: " + data['result']);
     });
