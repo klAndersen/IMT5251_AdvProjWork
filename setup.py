@@ -1,4 +1,4 @@
-"""Setup for chatagent XBlock."""
+"""Setup for ChatAgent XBlock."""
 
 import os
 from setuptools import setup
@@ -23,7 +23,7 @@ def package_data(pkg, roots):
 setup(
     name='chatagent-xblock',
     version='0.1',
-    description='chatagent XBlock',   # TODO: write a better description.
+    description='ChatBot for answering questions related to programming by using StackOverflow as knowlegde base',
     packages=[
         'chatagent',
     ],

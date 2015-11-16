@@ -6,7 +6,7 @@ import dbconfig as config
 _author_ = "Knut Lucas Andersen"
 
 
-class MySQLDB:
+class MySQLDatabase:
     """
     Class for handling MySQL database operations.
     The main goal of this class is to save test data from user experiments.
@@ -82,16 +82,19 @@ class MySQLDB:
         Arguments:
             table_name (str): The name of the table to retrieve content from
 
+        Returns:
+            str: The result of the db query
+            
         """
+        content = ""
         # executes the given SQL query
         query = "SELECT * FROM " + table_name + ";"
         cursor = self.__execute_query(query)
         result_set = cursor.fetchall()
 
         for row in result_set:
-            print "%s, %s" % (row["chatUserID"], row["username"])
+            content += "%s, %s" % (row["chatUserID"], row["username"])
+            content += "\n"
         self.__close_db_connection()
-
-
-tbl_name = "tblChatUsers"
-MySQLDB().print_table_content(tbl_name)
+        content += "\n-End-"
+        return content

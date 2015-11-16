@@ -6,6 +6,10 @@ from xblock.core import XBlock
 # from xblock.fields import Scope, Integer
 from xblock.fragment import Fragment
 
+import stackexchange
+
+from mysqldb import MySQLDatabase
+
 
 class ChatAgentXBlock(XBlock):
     """
@@ -33,13 +37,31 @@ class ChatAgentXBlock(XBlock):
         frag.initialize_js('ChatAgentXBlock')
         return frag
 
-    # TO-DO: change this to create the scenarios you'd like to see in the
-    # workbench while developing your XBlock.
+    @XBlock.json_handler
+    def print_test_data(self, data, suffix=''):
+        """
+        Just a dummy function to print random content.
+        Examples are:
+        - Data from MySQL
+        - Data from StackOverflow
+        - ...
+
+        Returns:
+             JSON: The loaded content
+        """
+        # tbl_name = "tblChatUsers"
+        # return {'result': MySQLDatabase().print_table_content(tbl_name)}
+        so = stackexchange.Site(stackexchange.StackOverflow)
+        my_favourite_guy = so.user(41981)
+        result = my_favourite_guy.reputation.format()
+        # result = "hello"
+        return {'result': result}
+
     @staticmethod
     def workbench_scenarios():
         """A canned scenario for display in the workbench."""
         return [
-            ("ChatAgentXBlock",
+            ("Chat Agent",
              """<vertical_demo>
                 <chatagent/>
                 </vertical_demo>
