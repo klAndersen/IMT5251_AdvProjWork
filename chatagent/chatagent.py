@@ -49,12 +49,10 @@ class ChatAgentXBlock(XBlock):
         Returns:
              JSON: The loaded content
         """
-        # tbl_name = "tblChatUsers"
-        # return {'result': MySQLDatabase().print_table_content(tbl_name)}
+        # return {'result': MySQLDatabase().print_table_content()}
         so = stackexchange.Site(stackexchange.StackOverflow)
         my_favourite_guy = so.user(41981)
         result = my_favourite_guy.reputation.format()
-        # result = "hello"
         return {'result': result}
 
     @staticmethod
