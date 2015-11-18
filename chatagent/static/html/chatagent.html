@@ -1,15 +1,17 @@
-<!-- Taken from: http://code.tutsplus.com/tutorials/how-to-create-a-simple-web-based-chat-application--net-5931  -->
+<!-- Based on: http://code.tutsplus.com/tutorials/how-to-create-a-simple-web-based-chat-application--net-5931  -->
 <div id="wrapper">
     <div id="menu">
-        <p class="welcome">Welcome, <b><!-- add studName here --></b></p>
-        <p class="logout"><a id="exit" href="#">Exit Chat</a></p>
+        <!-- Menu bar for the user, showing screen name and exit chat option -->
+        <p class="welcome">Welcome, <b class="username" id="username" ></b></p>
+        <p class="exit_chat"><a id="exit" href="#">Exit Chat</a></p>
         <div style="clear:both"></div>
     </div>
 
-    <textarea id="chatbox" class="chatbox" disabled></textarea>
+    <!-- Originally, this was a textarea. But textarea does not accept HTML formatting, so div is used instead -->
+    <div id="chatbox" class="chatbox" contenteditable="true"></div>
 
     <form name="message" action="">
-        <input name="usermsg" type="text" id="usermsg" size="63" />
-        <input name="submitmsg" type="submit"  id="submitmsg" value="Send" />
+        <input name="userInput" type="text" id="userInput" size="63" />
+        <input name="btnSubmit" type="submit"  id="btnSubmit" value="Send" />
     </form>
 </div>

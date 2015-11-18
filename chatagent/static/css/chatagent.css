@@ -39,7 +39,7 @@ a:hover { text-decoration:underline; }
     border:1px solid #ACD8F0;
     overflow:auto; }
 
-#usermsg {
+#userInput {
     width:395px;
     border:1px solid #ACD8F0; }
 
@@ -51,6 +51,6 @@ a:hover { text-decoration:underline; }
 
 .welcome { float:left; }
 
-.logout { float:right; }
+.exit_chat { float:right; }
 
 .msgln { margin:0 0 2px 0; }
