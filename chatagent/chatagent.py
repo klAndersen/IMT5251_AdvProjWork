@@ -1,4 +1,10 @@
-"""TO-DO: Write a description of what this XBlock is."""
+"""
+A simple Chat Agent with no intelligence that simply takes the presented question
+and looks for an answer on StackOverflow. This is a simple prototype, which is mostly
+preliminary work for my Master thesis which is to create an Intelligent Chat Agent that
+can answer students questions related to Programming by looking at posted answers on
+StackOverflow (and potentially other sites within the StackExchange community).
+"""
 
 import pkg_resources
 
@@ -13,7 +19,9 @@ import stackexchange
 
 class ChatAgentXBlock(XBlock):
     """
-    TO-DO: document what your XBlock does.
+    This class displays the Chat Agent to the user, and handles all
+    the interactions, from retrieving the question/answer, to storing
+    interactions into the database through the class ```MySQLDatabase```
     """
 
     def resource_string(self, path):
@@ -24,8 +32,7 @@ class ChatAgentXBlock(XBlock):
     # TO-DO: change this view to display your data your own way.
     def student_view(self, context=None):
         """
-        The primary view of the ChatAgentXBlock, shown to students
-        when viewing courses.
+        The primary view which displays the Chat Agent to the students.
         """
         html = self.resource_string("static/html/chatagent.html")
         frag = Fragment(html.format(self=self))
