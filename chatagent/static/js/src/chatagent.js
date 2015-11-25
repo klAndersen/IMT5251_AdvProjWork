@@ -29,7 +29,7 @@ function ChatAgentXBlock(runtime, element) {
     */
     function getDefaultWelcomeMessage() {
         var message = "";
-        username={'username': USER_NAME};
+        username = {'username': USER_NAME};
         console.log(username);
         invoke('get_default_welcome_message', username, function (data) {
             message = CHAT_AGENT_NAME + data['welcome_msg'];
@@ -58,20 +58,37 @@ function ChatAgentXBlock(runtime, element) {
     /**
     * Updates the chatbox with the users input and the results from the Chat Agent,
     * based on the passed input.
+    * @param screenname {string} User name
     * @param input {string} User input
     */
-    function updateChatLog(input) {
+    function updateChatLog(screenname, input) {
         /*
             TODO:
             - Handle and store input (e.g. lookup question, find answers, store in db)
             - Retrieve results and add to chatbox
             - Ask user for confirmation (Correct answer: Yes, No, New question)
         */
+        //add the users input to the chatbot
+        $('.chatbox').append(screenname);
         $('.chatbox').append(input);
-        invoke('print_test_data', input, function (data) {
+        $('.chatbox').append(HTML_NEWLINE);
+        //create JSON format for input
+        json_input = {'user_input': input};
+        console.log(input)
+        invoke('handle_user_input', json_input, function (data) {
             var chatlog = CHAT_AGENT_NAME + data['result'] + HTML_NEWLINE;
-            console.log(chatlog);
             $('.chatbox').append(chatlog);
+            //TODO: Remove and replace these later on
+            var links = $(".chatbox a").map(function() {
+                return this.href;
+            }).get();
+            //get the last link that were added
+            links = links[links.length-1];
+            //open the selected link
+            $(".chatbox a").click(function() {
+                console.log("href is: " + a_href);
+                window.open(links, '_blank');
+            }); //$(".chatbox a")
         }); //invoke
     } //updateChatLog
 
@@ -110,8 +127,8 @@ function ChatAgentXBlock(runtime, element) {
             var input = $('#userInput').val();
             var screenname = USER_NAME + ": ";
             if (input != "") {
-                input = screenname + $('#userInput').val() + HTML_NEWLINE;
-                updateChatLog(input);
+                input = $('#userInput').val();
+                updateChatLog(screenname, input);
                 $('#userInput').attr('value', "");
                 $('#userInput').focus();
             } //if

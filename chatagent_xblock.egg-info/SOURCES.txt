@@ -2,8 +2,9 @@ chatagent/__init__.py
 chatagent/answer.py
 chatagent/chatagent.py
 chatagent/dbconfig.py
-chatagent/mysqldb.py
+chatagent/mysqldatabase.py
 chatagent/question.py
+chatagent/searchstackexchange.py
 chatagent/static/README.txt
 chatagent/static/css/chatagent.css
 chatagent/static/html/chatagent.html
