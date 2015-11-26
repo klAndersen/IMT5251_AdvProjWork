@@ -1,5 +1,5 @@
 import json
-import stackexchange as StackExchange
+import stackexchange
 
 """
 This file contains all classes that are used to objectify, handle and process search results.
@@ -27,7 +27,7 @@ class SearchStackExchange:
     def __init__(self):
         self.__result_list = list()
 
-    def process_search_results_for_question(self, site=StackExchange.Site, question=str):
+    def process_search_results_for_question(self, site=stackexchange.Site, question=str):
         """
         Runs a search against the given site, looking for the given question and returns
         the object containing the search data.
@@ -38,14 +38,20 @@ class SearchStackExchange:
         See:
                 ```stackexchange.Site.search```
         Returns:
-            stackexchange.Site.search: The resultset of the search.
-                                        If you want the processed results, call ```get_list_of_results```
+            bool || stackexchange.Site.search: Returns ```False``` if search had no results (or failed).
+            If search was successful, the resultset of the search is returned.
+            If you want the processed results, call ```get_list_of_results```
 
         """
         search = site.search(intitle=question)
+        print(search)
         search.fetch()
-        if search is None or search.items is None:
-            return "No results found matching asked question."
+        print(search.items, len(search.items), (len(search.items) == 0), (search is None), ((search is None) or (len(search.items) == 0)))
+        if (search is None) or (len(search.items) == 0):
+            print("if")
+            return False
+
+        print("search")
 
         # TODO: Handle multiple results returned (e.g. pagecount > limit)
 
@@ -270,3 +276,4 @@ class Items(object):
 
     def get_owner(self):
         return self.__owner
+

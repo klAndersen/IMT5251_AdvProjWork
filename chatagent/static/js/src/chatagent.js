@@ -83,10 +83,10 @@ function ChatAgentXBlock(runtime, element) {
                 return this.href;
             }).get();
             //get the last link that were added
-            links = links[links.length-1];
+            last_link = links[links.length-1];
             //open the selected link
             $(".chatbox a").click(function() {
-                console.log("href is: " + a_href);
+                console.log("href is: " + last_link);
                 window.open(links, '_blank');
             }); //$(".chatbox a")
         }); //invoke
