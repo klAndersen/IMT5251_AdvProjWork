@@ -25,6 +25,9 @@ class SearchStackExchange:
     """
 
     NO_KEY_VALUE_FOR_ENTRY = -1
+    """
+    Constant for values that were not found, or was not set when retrieving the search results
+    """
 
     def __init__(self):
         self.__result_list = list()
@@ -45,18 +48,16 @@ class SearchStackExchange:
             If you want the processed results, call ```get_list_of_results```
 
         """
-        search = site.search(intitle=question)
+        # search for the given question, and retrieve those that have at least one answer
+        search = site.search_advanced(q=question, answers=1)
         if (search is None) or (len(search.items) == 0):
             return False
 
-        # TODO: Figure out why the loop returns duplicates (loops through the same page twice)
-        # TODO: Throttle error occurred approx 03:40 am
-        # TODO: Ask Simon about Tuple looping; perhaps the error is in the loop?
+        # Note! If a large result set is returned, it may go through the first result page twice
+        # I'm not sure why this happens, but it only happens for the first result page, and only
+        # if the result set consists of more than one result page.
 
         for result_sets in search:
-            # TODO: REMOVE THIS
-            if hasattr(result_sets, 'owner'):
-                print(result_sets.owner.display_name)
             # retrieve the data
             accepted_answer_id = int(self.__is_key_in_json('accepted_answer_id', result_sets.json))
             answer_count = int(self.__is_key_in_json('answer_count', result_sets.json))
@@ -233,24 +234,3 @@ class StackExchangeQuestions(object):
     def get_user(self):
         return self.__user
 
-# selected_site = stackexchange.Site(stackexchange.StackOverflow)
-# # TODO: Turn off debugging options
-# stackexchange.impose_throttling = True
-# stackexchange.throttle_stop = False
-# stackexchange.web.WebRequestManager.debug = True
-# search_stackexchange = SearchStackExchange()
-# res_obj = None
-# # was the search executed successfully?
-# search_result = search_stackexchange.process_search_results_for_question(selected_site, 'how to increment') #'Py-StackExchange filter by tag') #
-# if type(search_result) is bool and search_result is False:
-#     result = "No results found matching asked question."
-# else:
-#     # test question: 'Py-StackExchange filter by tag'
-#     res_list = search_stackexchange.get_list_of_results()
-#     if len(res_list) == 1:
-#         res_obj = res_list[0]
-#     else:
-#         # TODO: handle multiple results here.. for now, just retrieve the first one
-#         res_obj = res_list[0]
-# if res_obj is not None:
-#     print(res_obj.get_user().get_display_name())

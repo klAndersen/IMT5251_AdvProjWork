@@ -24,6 +24,16 @@ class ChatAgentXBlock(XBlock):
     interactions into the database through the class ```MySQLDatabase```
     """
 
+    __STACK_EXCHANGE_CLIENT_ID = 6041
+    """
+    Client ID for StackExchange API, see: https://api.stackexchange.com/docs/authentication
+    """
+
+    __STACK_EXCHANGE_KEY = "DMercir86DS8ZhXwHZ)vxg(("
+    """
+    Key for StackExchange API, see: https://api.stackexchange.com/docs/authentication
+    """
+
     # contains the active users data
     user_dict = Dict(
         default={
@@ -131,7 +141,7 @@ class ChatAgentXBlock(XBlock):
             # store the question, and retrieve its id
             question_id = self.store_question_in_database(user_id, user_input, asked_by_user, edx_question_id)
             # retrieve data from StackOverflow
-            selected_site = stackexchange.Site(stackexchange.StackOverflow)
+            selected_site = stackexchange.Site(stackexchange.StackOverflow, self.__STACK_EXCHANGE_KEY)
             # TODO: Turn off debugging options
             stackexchange.impose_throttling = True
             stackexchange.throttle_stop = False
