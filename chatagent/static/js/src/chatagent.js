@@ -87,7 +87,7 @@ function ChatAgentXBlock(runtime, element) {
             //open the selected link
             $(".chatbox a").click(function() {
                 console.log("href is: " + last_link);
-                window.open(links, '_blank');
+                window.open(last_link, '_blank');
             }); //$(".chatbox a")
         }); //invoke
     } //updateChatLog

@@ -233,24 +233,24 @@ class StackExchangeQuestions(object):
     def get_user(self):
         return self.__user
 
-selected_site = stackexchange.Site(stackexchange.StackOverflow)
-# TODO: Turn off debugging options
-stackexchange.impose_throttling = True
-stackexchange.throttle_stop = False
-stackexchange.web.WebRequestManager.debug = True
-search_stackexchange = SearchStackExchange()
-res_obj = None
-# was the search executed successfully?
-search_result = search_stackexchange.process_search_results_for_question(selected_site, 'how to increment') #'Py-StackExchange filter by tag') #
-if type(search_result) is bool and search_result is False:
-    result = "No results found matching asked question."
-else:
-    # test question: 'Py-StackExchange filter by tag'
-    res_list = search_stackexchange.get_list_of_results()
-    if len(res_list) == 1:
-        res_obj = res_list[0]
-    else:
-        # TODO: handle multiple results here.. for now, just retrieve the first one
-        res_obj = res_list[0]
-if res_obj is not None:
-    print(res_obj.get_user().get_display_name())
+# selected_site = stackexchange.Site(stackexchange.StackOverflow)
+# # TODO: Turn off debugging options
+# stackexchange.impose_throttling = True
+# stackexchange.throttle_stop = False
+# stackexchange.web.WebRequestManager.debug = True
+# search_stackexchange = SearchStackExchange()
+# res_obj = None
+# # was the search executed successfully?
+# search_result = search_stackexchange.process_search_results_for_question(selected_site, 'how to increment') #'Py-StackExchange filter by tag') #
+# if type(search_result) is bool and search_result is False:
+#     result = "No results found matching asked question."
+# else:
+#     # test question: 'Py-StackExchange filter by tag'
+#     res_list = search_stackexchange.get_list_of_results()
+#     if len(res_list) == 1:
+#         res_obj = res_list[0]
+#     else:
+#         # TODO: handle multiple results here.. for now, just retrieve the first one
+#         res_obj = res_list[0]
+# if res_obj is not None:
+#     print(res_obj.get_user().get_display_name())

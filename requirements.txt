@@ -1,2 +1,3 @@
 requests
 -e .
+py-stackexchange >= 2.0
