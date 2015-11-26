@@ -10,7 +10,7 @@ The problem with this however, is that the format returns the Question model, wh
 to retrieve the currently accepted answer (presuming there is one). For this project, I think the code will be as-is,
 but this may be updated and changed during my Master thesis.
 
-As for the comments marked '# noinspection PyUnresolvedReferences', these are to disable warnings from PyCharm.
+As for the comment marked '# noinspection PyUnresolvedReferences', this is used to disable warning from PyCharm.
 """
 
 _author_ = "Knut Lucas Andersen"
@@ -23,6 +23,8 @@ class SearchStackExchange:
     The main goal of this class is to handle search, lookup answers and all other required interactions
     with the StackExchange community
     """
+
+    NO_KEY_VALUE_FOR_ENTRY = -1
 
     def __init__(self):
         self.__result_list = list()
@@ -44,86 +46,43 @@ class SearchStackExchange:
 
         """
         search = site.search(intitle=question)
-        print(search)
-        search.fetch()
-        print(search.items, len(search.items), (len(search.items) == 0), (search is None), ((search is None) or (len(search.items) == 0)))
         if (search is None) or (len(search.items) == 0):
-            print("if")
             return False
 
-        print("search")
-
-        # TODO: Handle multiple results returned (e.g. pagecount > limit)
+        # TODO: Figure out why the loop returns duplicates (loops through the same page twice)
+        # TODO: Throttle error occurred approx 03:40 am
+        # TODO: Ask Simon about Tuple looping; perhaps the error is in the loop?
 
         for result_sets in search:
-            items_obj = self.__create_items_object(result_sets.json)
-            self.__result_list.append(items_obj)
+            # TODO: REMOVE THIS
+            if hasattr(result_sets, 'owner'):
+                print(result_sets.owner.display_name)
+            # retrieve the data
+            accepted_answer_id = int(self.__is_key_in_json('accepted_answer_id', result_sets.json))
+            answer_count = int(self.__is_key_in_json('answer_count', result_sets.json))
+            creation_date = result_sets.creation_date
+            is_answered = bool(self.__is_key_in_json('is_answered', result_sets.json))
+            link = str(self.__is_key_in_json('link', result_sets.json))
+            question_id = result_sets.id
+            score = result_sets.score
+            title = result_sets.title
+            view_count = result_sets.view_count
+            # check if this question has an owner/user
+            if hasattr(result_sets, 'owner'):
+                display_name = result_sets.owner.display_name
+                profile_link = result_sets.owner.link
+                reputation = result_sets.owner.reputation
+                user_id = result_sets.owner.id
+                user_type = result_sets.owner.user_type
+                # create object of the User
+                user_obj = StackExchangeUser(display_name, profile_link, reputation, user_id, user_type)
+            else:
+                user_obj = None
+            # create object of the Question
+            question_obj = StackExchangeQuestions(accepted_answer_id, answer_count, creation_date, is_answered, link,
+                                                  question_id, score, title, view_count, user_obj)
+            self.__result_list.append(question_obj)
         return search
-    
-    def __create_items_object(self, json_dict=json):
-        """
-        Retrieves the ```items``` data from the JSON dictionary and adds it to the object for easy retrieval
-
-        Arguments:
-            json_dict (json): JSON dictionary with ```items``` data
-
-        """
-        # noinspection PyUnresolvedReferences
-        accepted_answer_id = json_dict['accepted_answer_id']
-        # noinspection PyUnresolvedReferences
-        answer_count = json_dict['answer_count']
-        # noinspection PyUnresolvedReferences
-        creation_date = json_dict['creation_date']
-        # noinspection PyUnresolvedReferences
-        is_answered = json_dict['is_answered']
-        # noinspection PyUnresolvedReferences
-        last_activity_date = json_dict['last_activity_date']
-        # noinspection PyUnresolvedReferences
-        last_edit_date = json_dict['last_edit_date']
-        # noinspection PyUnresolvedReferences
-        link = json_dict['link']
-        # noinspection PyUnresolvedReferences
-        question_id = json_dict['question_id']
-        # noinspection PyUnresolvedReferences
-        score = json_dict['score']
-        # noinspection PyUnresolvedReferences
-        title = json_dict['title']
-        # noinspection PyUnresolvedReferences
-        view_count = json_dict['view_count']
-        # noinspection PyUnresolvedReferences
-        owner = self.__create_owner_object(json_dict['owner'])
-        items_obj = Items(accepted_answer_id, answer_count, creation_date, is_answered, last_activity_date,
-                          last_edit_date, link, question_id, score, title, view_count, owner)
-        return items_obj
-
-    @staticmethod
-    def __create_owner_object(json_dict=json):
-        """
-        Retrieves the ```owner``` data from the JSON dictionary and adds it to the object for easy retrieval
-
-        Arguments:
-            json_dict (json): JSON dictionary with ```owner``` data
-
-        Returns:
-            Owner: Class object based on data from JSON
-
-        """
-        # noinspection PyUnresolvedReferences
-        accept_rate = json_dict['accept_rate']
-        # noinspection PyUnresolvedReferences
-        display_name = json_dict['display_name']
-        # noinspection PyUnresolvedReferences
-        link = json_dict['link']
-        # noinspection PyUnresolvedReferences
-        profile_image = json_dict['profile_image']
-        # noinspection PyUnresolvedReferences
-        reputation = json_dict['reputation']
-        # noinspection PyUnresolvedReferences
-        user_id = json_dict['user_id']
-        # noinspection PyUnresolvedReferences
-        user_type = json_dict['user_type']
-        owner_obj = Owner(accept_rate, display_name, link, profile_image, reputation, user_id, user_type)
-        return owner_obj
 
     def get_list_of_results(self):
         """
@@ -134,54 +93,58 @@ class SearchStackExchange:
         """
         return self.__result_list
 
+    def __is_key_in_json(self, key=str, json_dict=json):
+        """
 
-class Owner(object):
+        Arguments:
+            key (str): The key to check if exists in the JSON dictionary
+            json_dict (json): The JSON object/dictionary to check if contains key
+
+        Returns:
+            object: Returns the value belonging to the given key, or ```NO_KEY_VALUE_FOR_ENTRY```
+
+        """
+        if key in json_dict:
+            # noinspection PyUnresolvedReferences
+            return json_dict[key]
+        else:
+            return self.NO_KEY_VALUE_FOR_ENTRY
+
+
+class StackExchangeUser(object):
     """
     Object class for creating objects of the ```owner``` data retrieved from StackExchange.
     """
 
-    __accept_rate = None  # int
     __display_name = None  # str
     __link = None  # str/url
-    __profile_image = None  # str/url
     __reputation = None  # int
     __user_id = None  # int
     __user_type = None  # str
 
-    def __init__(self, accept_rate=int, display_name=str, link=str, profile_image=str, reputation=int,
-                 user_id=int, user_type=str):
+    def __init__(self, display_name=str, link=str, reputation=int, user_id=int, user_type=str):
         """
         Constructs an object of the Owner data from the returned JSON results
         
         Arguments:
-            accept_rate (int):
             display_name (str):
             link (str):
-            profile_image (str):
             reputation (int):
             user_id (int):
             user_type:
         
         """
-        self.__accept_rate = accept_rate
         self.__display_name = display_name
         self.__link = link
-        self.__profile_image = profile_image
         self.__reputation = reputation
         self.__user_id = user_id
         self.__user_type = user_type
-
-    def get_accept_rate(self):
-        return self.__accept_rate
 
     def get_display_name(self):
         return self.__display_name
 
     def get_link(self):
         return self.__link
-
-    def get_profile_image(self):
-        return self.__profile_image
 
     def get_reputation(self):
         return self.__reputation
@@ -193,25 +156,26 @@ class Owner(object):
         return self.__user_type
 
 
-class Items(object):
+class StackExchangeQuestions(object):
+    """
+    Object class for creating objects of the questions retrieved from StackExchange.
+    """
 
     __accepted_answer_id = None  # int
     __answer_count = None  # int
     __creation_date = None  # date (unix epoch time)
     __is_answered = None  # bool
-    __last_activity_date = None  # date (unix epoch time)
-    __last_edit_date = None  # date (unix epoch time)
     __link = None  # str (url)
     __question_id = None  # int
     __score = None  # int
     __title = None  # string
     __view_count = None  # int
-    __owner = None  # object (Owner)
+    __user = None  # object (Owner)
 
     def __init__(self, accepted_answer_id=int, answer_count=int, creation_date=str, is_answered=bool,
-                 last_activity_date=str, last_edit_date=str, link=str, question_id=int, score=int,
-                 title=str, view_count=int, owner=Owner):
+                 link=str, question_id=int, score=int, title=str, view_count=int, user=StackExchangeUser):
         """
+        Constructs an object of the Question found at StackExchange
         
         Arguments:
         accepted_answer_id (int):
@@ -232,14 +196,12 @@ class Items(object):
         self.__answer_count = answer_count
         self.__creation_date = creation_date
         self.__is_answered = is_answered
-        self.__last_activity_date = last_activity_date
-        self.__last_edit_date = last_edit_date
         self.__link = link
         self.__question_id = question_id
         self.__score = score
         self.__title = title
         self.__view_count = view_count
-        self.__owner = owner
+        self.__user = user
 
     def get_accepted_answer_id(self):
         return self.__accepted_answer_id
@@ -252,12 +214,6 @@ class Items(object):
 
     def get_is_answered(self):
         return self.__is_answered
-
-    def get_last_activity_date(self):
-        return self.__last_activity_date
-
-    def get_last_edit_date(self):
-        return self.__last_edit_date
 
     def get_link(self):
         return self.__link
@@ -274,6 +230,27 @@ class Items(object):
     def get_view_count(self):
         return self.__view_count
 
-    def get_owner(self):
-        return self.__owner
+    def get_user(self):
+        return self.__user
 
+selected_site = stackexchange.Site(stackexchange.StackOverflow)
+# TODO: Turn off debugging options
+stackexchange.impose_throttling = True
+stackexchange.throttle_stop = False
+stackexchange.web.WebRequestManager.debug = True
+search_stackexchange = SearchStackExchange()
+res_obj = None
+# was the search executed successfully?
+search_result = search_stackexchange.process_search_results_for_question(selected_site, 'how to increment') #'Py-StackExchange filter by tag') #
+if type(search_result) is bool and search_result is False:
+    result = "No results found matching asked question."
+else:
+    # test question: 'Py-StackExchange filter by tag'
+    res_list = search_stackexchange.get_list_of_results()
+    if len(res_list) == 1:
+        res_obj = res_list[0]
+    else:
+        # TODO: handle multiple results here.. for now, just retrieve the first one
+        res_obj = res_list[0]
+if res_obj is not None:
+    print(res_obj.get_user().get_display_name())

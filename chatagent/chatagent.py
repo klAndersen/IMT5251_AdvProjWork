@@ -153,7 +153,7 @@ class ChatAgentXBlock(XBlock):
                 result = "<a class='link' id='link' target='_blank' href='" \
                          + res_obj.get_link() + "'>" + res_obj.get_link() + "</a>"
         except Exception, ex:
-            result += str(ex)
+            result += "An error occurred during processing. The error is: " + str(ex)
         return {'result': result}
 
     @staticmethod
