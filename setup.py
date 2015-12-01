@@ -10,6 +10,13 @@ def package_data(pkg, roots):
     All of the files under each of the `roots` will be declared as package
     data for package `pkg`.
 
+    Arguments:
+        pkg
+        roots
+
+    Returns:
+        Dict:
+
     """
     data = []
     for root in roots:

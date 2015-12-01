@@ -38,7 +38,6 @@ class ChatAgentXBlock(XBlock):
     text gets cut off with a 'Read more?'
     """
 
-
     # contains the active users data
     user_dict = Dict(
         default={
@@ -55,7 +54,13 @@ class ChatAgentXBlock(XBlock):
     )
 
     def resource_string(self, path):
-        """Handy helper for getting resources from our kit."""
+        """
+        Handy helper for getting resources from our kit.
+
+        Arguments:
+            path
+
+        """
         data = pkg_resources.resource_string(__name__, path)
         return data.decode("utf8")
 
@@ -63,6 +68,9 @@ class ChatAgentXBlock(XBlock):
     def student_view(self, context=None):
         """
         The primary view which displays the Chat Agent to the students.
+
+        Arguments:
+            context
         """
         html = self.resource_string("static/html/chatagent.html")
         frag = Fragment(html.format(self=self))
@@ -77,8 +85,8 @@ class ChatAgentXBlock(XBlock):
         Get the default welcome message that the user is presented with upon entering the chat.
 
         Arguments:
-            data
-            suffix (str)
+            data (dict): JSON dictionary containing the username {'username': username}
+            suffix (str):
 
         Returns:
              JSON: The retrieved welcome message; {'welcome_msg': welcome_msg}
@@ -102,8 +110,8 @@ class ChatAgentXBlock(XBlock):
         Get the name of the currently logged in/active user to display his/her name in the chat agent.
 
         Arguments:
-            data
-            suffix (str)
+            data (dict): JSON dictionary
+            suffix (str):
 
         Returns:
              JSON: The retrieved username; {'username': username}
@@ -130,11 +138,16 @@ class ChatAgentXBlock(XBlock):
         Function for processing user input to retrieve answer from StackOverflow
 
         Arguments:
-            data
-            suffix (str)
+            data (dict): JSON dictionary containing users input {'user_input': user_input}
+            suffix (str):
 
         Returns:
-             JSON: The loaded content; {'result': result}
+             dict:
+             |  results_dict = {
+             |         'title': title,
+             |         'response': response,
+             |         'disable_link': disable_link
+             |     }
 
         """
         # get and set relevant data
@@ -215,7 +228,7 @@ class ChatAgentXBlock(XBlock):
             edx_question_id (int): The EDX ID of the question (if this was taken from an EDX course)
 
         Returns:
-            long: The primary key of the inserted data
+            long: The primary key of the inserted question
 
         """
         question_dict = {
@@ -235,7 +248,7 @@ class ChatAgentXBlock(XBlock):
         Arguments:
             answer (str): The answer text that was retrieved and presented
             so_link (str): The link (url) to the site where answer was retrieved from
-            question_id (int): The ID for the question that was asked (primary key in MySQL db)
+            question_id (long): The ID for the question that was asked (primary key in MySQL db)
             correct_answer (bool): Is this answer accepted by the chat agent user as the correct one?
 
         Returns:
