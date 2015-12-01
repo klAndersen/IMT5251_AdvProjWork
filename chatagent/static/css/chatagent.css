@@ -1,4 +1,5 @@
-/* CSS for ChatAgentXBlock
+/*
+CSS for ChatAgentXBlock
 
 Taken from:
 http://code.tutsplus.com/tutorials/how-to-create-a-simple-web-based-chat-application--net-5931
@@ -7,26 +8,38 @@ body {
     font:12px arial;
     color: #222;
     text-align:center;
-    padding:35px; }
+    padding:35px;
+}
 
 form, p, span {
     margin:0;
-    padding:0; }
+    padding:0;
+}
 
 input { font:12px arial; }
 
 a {
     color:#0000FF;
-    text-decoration:none; }
+    text-decoration:none;
+}
 
-a:hover { text-decoration:underline; }
+a:hover {
+    text-decoration:underline;
+}
+
+a[disabled], a[disabled]:hover {
+    color: black;
+    pointer-events: none;
+    text-decoration:none;
+}
 
 #wrapper {
     margin:0 auto;
     padding-bottom:25px;
     background:#EBF4FB;
     width:504px;
-    border:1px solid #ACD8F0; }
+    border:1px solid #ACD8F0;
+}
 
 #chatbox {
     text-align:left;
@@ -37,20 +50,34 @@ a:hover { text-decoration:underline; }
     height:270px;
     width:430px;
     border:1px solid #ACD8F0;
-    overflow:auto; }
+    overflow:auto;
+}
 
 #userInput {
     width:395px;
-    border:1px solid #ACD8F0; }
+    border:1px solid #ACD8F0;
+}
 
-#submit { width: 60px; }
+#submit {
+    width: 60px;
+}
 
-.error { color: #ff0000; }
+.error {
+    color: #ff0000;
+}
 
-#menu { padding:12.5px 25px 12.5px 25px; }
+#menu {
+    padding:12px 25px 12px 25px;
+}
 
-.welcome { float:left; }
+.welcome {
+    float:left;
+}
 
-.exit_chat { float:right; }
+.exit_chat {
+    float:right;
+}
 
-.msgln { margin:0 0 2px 0; }
+.msgln {
+    margin:0 0 2px 0;
+}

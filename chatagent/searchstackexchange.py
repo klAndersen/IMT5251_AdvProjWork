@@ -154,7 +154,13 @@ class SearchStackExchange:
         Returns:
 
         """
-        obj = self.__result_list[index]
+        site = self.__site
+        site.be_inclusive()
+        question_obj = self.__result_list[index]
+        q_id = question_obj.get_question_id()
+        question = site.question(q_id)
+        answer_list = question.answers
+        return answer_list
 
     def __is_key_in_json(self, key=str, json_dict=json):
         """

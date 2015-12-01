@@ -64,8 +64,8 @@ function ChatAgentXBlock(runtime, element) {
     } //getAndSetUsername
 
     /**
-    * Updates the chatbox with the users input and the results from the Chat Agent,
-    * based on the passed input.
+    * Updates the chatbox with the users input and the results from the Chat Agent.
+    * The results are based on the passed input from the user.
     * @param screenname {string} User name
     * @param input {string} User input
     */
@@ -74,27 +74,28 @@ function ChatAgentXBlock(runtime, element) {
             TODO:
             - Ask user for confirmation (Correct answer: Yes, No, New question)
         */
+        var title = "";
+        var chatlog = "";
+        var response = "";
+        var disableLink = false;
+        //create JSON format for input
+        var json_input = {'user_input': input};
         //add the users input to the chatbot
         $(CHATBOX_ID).append(screenname);
         $(CHATBOX_ID).append(input);
         $(CHATBOX_ID).append(HTML_NEWLINE);
-        //create JSON format for input
-        var json_input = {'user_input': input};
-        console.log(input);
         invoke('handle_user_input', json_input, function (data) {
-            var chatlog = CHAT_AGENT_NAME + data['result'] + HTML_NEWLINE;
+            title = data['title'];
+            response = data['response'];
+            disableLink = data['disable_link'];
+            //check if links should be removed, and if the answer contains hyperlink
+            if (disableLink && response.indexOf("<a ") >= 0) {
+                //remove first occurrence of <a>
+                response = $(response + " a:first").text();
+            } //if
+            chatlog = CHAT_AGENT_NAME + title + response + HTML_NEWLINE;
+            console.log(chatlog);
             $(CHATBOX_ID).append(chatlog);
-            //TODO: Remove and replace these later on
-            var links = $(CHATBOX_ID + " a").map(function() {
-                return this.href;
-            }).get();
-            //get the last link that were added
-            var last_link = links[links.length-1];
-            //open the selected link
-            $(CHATBOX_ID + " a").click(function() {
-                console.log("href is: " + last_link);
-                window.open(last_link, '_blank');
-            }); //$(".chatbox a")
         }); //invoke
     } //updateChatLog
 
@@ -105,12 +106,27 @@ function ChatAgentXBlock(runtime, element) {
     * @param onSuccess {function (data)} Action to execute on sucessfull POST (e.g. data processing)
     */
     function invoke(method, data, onSuccess) {
+        var statusCode = 0;
+        var errorMsg = 0;
         var handlerUrl = runtime.handlerUrl(element, method);
         $.ajax({
             type: "POST",
             url: handlerUrl,
             data: JSON.stringify(data),
-            success: onSuccess
+            success: onSuccess,
+            statusCode: {
+                404: function() {
+                    statusCode = 404;
+                    errorMsg = statusCode + ": This page does not exist.";
+                    console.log(errorMsg)
+                }, //404
+                500: function() {
+                    statusCode = 500;
+                    errorMsg = statusCode + ": Internal Server Error.";
+                    console.log(errorMsg);
+                    $(CHATBOX_ID).append(CHAT_AGENT_NAME + " " + errorMsg + HTML_NEWLINE);
+                } //500
+            } //statuscode
         }); //$.ajax
     } //invoke
 

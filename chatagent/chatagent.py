@@ -31,6 +31,14 @@ class ChatAgentXBlock(XBlock):
     This is the only site that will be used in this project.
     """
 
+    __ANSWER_TEXT_LENGTH = 125
+    """
+    The length of the returned answer displayed to the user.
+    The length equals the number of characters before the
+    text gets cut off with a 'Read more?'
+    """
+
+
     # contains the active users data
     user_dict = Dict(
         default={
@@ -130,6 +138,9 @@ class ChatAgentXBlock(XBlock):
 
         """
         # get and set relevant data
+        title = ""
+        response = ""
+        disable_link = True
         asked_by_user = True
         edx_question_id = None
         use_adv_search = False
@@ -150,17 +161,28 @@ class ChatAgentXBlock(XBlock):
                 else:
                     # TODO: handle multiple results here... for now, just retrieve the first one
                     res_obj = res_list[0]
+
+                answer_list = search_stackexchange.get_question_data(0)
+                if len(answer_list) > 0:
+                    body = answer_list[0].body
+                else:
+                    body = "No answers were found for this question."
                 # display result to user
-                result = "Found this question: <br /><i>" + res_obj.get_title() + "</i><br />"
-                result += "The belonging answer can be found at: "
-                # TODO: Use data to retrieve and add answer to chatbot (lookup needed; for now link is returned)
-                result += "<p><a class='link' id='link' target='_blank' href='"
-                result += res_obj.get_link() + "'>" + res_obj.get_link() + "</a></p>"
+                title = "<i>" + res_obj.get_title() + "</i><p />"
+                end_text = ("<i>... Read more?</i>" if len(body) > self.__ANSWER_TEXT_LENGTH else "")
+                response = "" + body[:self.__ANSWER_TEXT_LENGTH] + end_text
             else:
-                result = "No results found matching asked question."
+                disable_link = False
+                response = "No results matching this question."
         except AttributeError, err:
-            result = "An error occurred during processing. The error is: " + str(err)
-        return {'result': result}
+            response = "An error occurred during processing. The error is: " + str(err)
+        # set values in dictionary
+        results_dict = {
+            'title': title,
+            'response': response,
+            'disable_link': disable_link
+        }
+        return results_dict
 
     @staticmethod
     def __store_username_in_database(username=str):
