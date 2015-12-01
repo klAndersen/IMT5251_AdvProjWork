@@ -1,2 +1,10 @@
+/pylint_chatagent.dbconfig.txt
+/pylint_chatagent.txt
+/pylint_chatagent.chatagent.txt
+/pylint_chatagent.mysqldatabase.txt
+/pylint_chatagent.searchstackexchange.txt
+/pylint_global.txt
+/pylint_chatagent.answer.txt
+/pylint_chatagent.question.txt
 # exclude configuration files that may have sensitive content
 *config.py

@@ -1,13 +1,14 @@
 """
-A simple Chat Agent with no intelligence that simply takes the presented question
-and looks for an answer on StackOverflow. This is a simple prototype, which is mostly
-preliminary work for my Master thesis which is to create an Intelligent Chat Agent that
-can answer students questions related to Programming by looking at posted answers on
-StackOverflow (and potentially other sites within the StackExchange community).
+A simple Chat Agent with no intelligence that simply takes the presented
+question and looks for an answer on StackOverflow. This is a simple
+prototype, which is mostly preliminary work for my Master thesis which is
+to create an Intelligent Chat Agent that can answer students questions
+related to Programming by looking at posted answers on StackOverflow
+(and potentially other sites within the StackExchange community).
 """
 
+
 import pkg_resources
-import stackexchange
 
 from xblock.core import XBlock
 from xblock.fragment import Fragment
@@ -24,14 +25,10 @@ class ChatAgentXBlock(XBlock):
     interactions into the database through the class ```MySQLDatabase```
     """
 
-    __STACK_EXCHANGE_CLIENT_ID = 6041
+    __DEFAULT_SITE_TO_USE = "StackOverflow"
     """
-    Client ID for StackExchange API, see: https://api.stackexchange.com/docs/authentication
-    """
-
-    __STACK_EXCHANGE_KEY = "DMercir86DS8ZhXwHZ)vxg(("
-    """
-    Key for StackExchange API, see: https://api.stackexchange.com/docs/authentication
+    The default site to use if none other are specified.
+    This is the only site that will be used in this project.
     """
 
     # contains the active users data
@@ -108,9 +105,10 @@ class ChatAgentXBlock(XBlock):
         default = "default"
         if len(self.user_dict) == 0 or self.user_dict.get('username') == default:
             # TODO: Retrieve (and/or) store the username of the currently active/logged in user
-            username = default  # self.xmodule_runtime.anonymous_student_id # this isn't there anymore it seems
+            # self.xmodule_runtime.anonymous_student_id => this isn't there anymore it seems
+            username = default
             # store username, and add name to welcome message
-            user_id = self.store_username_in_database(default)
+            user_id = self.__store_username_in_database(default)
             self.user_dict = {
                 'user_id': user_id,
                 'username': username
@@ -132,26 +130,19 @@ class ChatAgentXBlock(XBlock):
 
         """
         # get and set relevant data
-        user_id = self.user_dict.get('user_id')
-        user_input = data['user_input']
         asked_by_user = True
         edx_question_id = None
-        result = ""
+        use_adv_search = False
+        user_input = data['user_input']
+        user_id = self.user_dict.get('user_id')
+        selected_site = self.__DEFAULT_SITE_TO_USE
         try:
-            # store the question, and retrieve its id
-            question_id = self.store_question_in_database(user_id, user_input, asked_by_user, edx_question_id)
-            # retrieve data from StackOverflow
-            selected_site = stackexchange.Site(stackexchange.StackOverflow, self.__STACK_EXCHANGE_KEY)
-            # TODO: Turn off debugging options
-            stackexchange.impose_throttling = True
-            stackexchange.throttle_stop = False
-            stackexchange.web.WebRequestManager.debug = True
-            search_stackexchange = SearchStackExchange()
+            # store question and retrieve its id
+            question_id = self.__store_question_in_database(user_id, user_input, asked_by_user, edx_question_id)
+            search_stackexchange = SearchStackExchange(selected_site)
             # was the search executed successfully?
-            search_result = search_stackexchange.process_search_results_for_question(selected_site, user_input)
-            if type(search_result) is bool and search_result is False:
-                result = "No results found matching asked question."
-            else:
+            results_found = search_stackexchange.process_search_results_for_question(user_input, use_adv_search)
+            if results_found:
                 # test question: 'Py-StackExchange filter by tag'
                 res_list = search_stackexchange.get_list_of_results()
                 if len(res_list) == 1:
@@ -159,15 +150,20 @@ class ChatAgentXBlock(XBlock):
                 else:
                     # TODO: handle multiple results here... for now, just retrieve the first one
                     res_obj = res_list[0]
+                # display result to user
+                result = "Found this question: <br /><i>" + res_obj.get_title() + "</i><br />"
+                result += "The belonging answer can be found at: "
                 # TODO: Use data to retrieve and add answer to chatbot (lookup needed; for now link is returned)
-                result = "<a class='link' id='link' target='_blank' href='" \
-                         + res_obj.get_link() + "'>" + res_obj.get_link() + "</a>"
-        except Exception, ex:
-            result += "An error occurred during processing. The error is: " + str(ex)
+                result += "<p><a class='link' id='link' target='_blank' href='"
+                result += res_obj.get_link() + "'>" + res_obj.get_link() + "</a></p>"
+            else:
+                result = "No results found matching asked question."
+        except AttributeError, err:
+            result = "An error occurred during processing. The error is: " + str(err)
         return {'result': result}
 
     @staticmethod
-    def store_username_in_database(username=str):
+    def __store_username_in_database(username=str):
         """
         Stores the currently asked question in the database.
 
@@ -185,7 +181,7 @@ class ChatAgentXBlock(XBlock):
         return pk_user
 
     @staticmethod
-    def store_question_in_database(user_id=int, question=str, asked_by_user=bool, edx_question_id=None):
+    def __store_question_in_database(user_id=int, question=str, asked_by_user=bool, edx_question_id=None):
         """
         Stores the currently asked question in the database.
 
@@ -209,7 +205,7 @@ class ChatAgentXBlock(XBlock):
         return pk_question
 
     @staticmethod
-    def store_answer_in_database(answer=str, so_link=str, question_id=int, correct_answer=bool):
+    def __store_answer_in_database(answer=str, so_link=str, question_id=int, correct_answer=bool):
         """
         Stores the currently presented answer in the database.
 

@@ -2,7 +2,7 @@
 # based on example found here:
 # http://martin-thoma.com/configuration-files-in-python/#tocAnchor-1-1
 
-db_parameters = {
+mysql_parameters = {
     'host': 'localhost',
     'user': 'user',
     'passwd': 'password',

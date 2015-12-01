@@ -1,3 +1,4 @@
 requests
 -e .
-py-stackexchange >= 2.0
+py-stackexchange >= 2.2
+MySQL-python >= 1.2.5

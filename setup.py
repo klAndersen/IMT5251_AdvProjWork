@@ -29,6 +29,7 @@ setup(
     ],
     install_requires=[
         'XBlock',
+        'Py-StackExchange'
     ],
     entry_points={
         'xblock.v1': [

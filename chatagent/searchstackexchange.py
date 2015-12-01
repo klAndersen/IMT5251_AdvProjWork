@@ -3,12 +3,12 @@ import stackexchange
 
 """
 This file contains all classes that are used to objectify, handle and process search results.
-It can be debated whether or not creating my own objects is a good idea, since the Py-StackExchange comes with its own
-models, see: https://github.com/lucjon/Py-StackExchange/blob/master/stackexchange/models.py
+It can be debated whether or not creating my own objects is a good idea, since the Py-StackExchange
+comes with its own models, see: https://github.com/lucjon/Py-StackExchange/blob/master/stackexchange/models.py
 
 The problem with this however, is that the format returns the Question model, which leads to me not being able
-to retrieve the currently accepted answer (presuming there is one). For this project, I think the code will be as-is,
-but this may be updated and changed during my Master thesis.
+to retrieve the currently accepted answer (presuming there is one). For this project, I think the code will be
+as-is, but this may be updated and changed during my Master thesis.
 
 As for the comment marked '# noinspection PyUnresolvedReferences', this is used to disable warning from PyCharm.
 """
@@ -24,32 +24,82 @@ class SearchStackExchange:
     with the StackExchange community
     """
 
+    __PAGE_SIZE = 100
+    """
+    The amount of pages returned can be very large depending on search parameters and search used.
+    Regardless, it is doubtful that more than 100 pages will contain the answer, and if so the
+    user should re-phrase the question to get more consistent results
+    """
+
+    __STACK_EXCHANGE_CLIENT_ID = 6041
+    """
+    Client ID for StackExchange API, see: https://api.stackexchange.com/docs/authentication
+    """
+
+    __STACK_EXCHANGE_KEY = "DMercir86DS8ZhXwHZ)vxg(("
+    """
+    Key for StackExchange API, see: https://api.stackexchange.com/docs/authentication
+    """
+
     NO_KEY_VALUE_FOR_ENTRY = -1
     """
     Constant for values that were not found, or was not set when retrieving the search results
     """
 
-    def __init__(self):
-        self.__result_list = list()
+    __site = None
 
-    def process_search_results_for_question(self, site=stackexchange.Site, question=str):
+    def __init__(self, site_name=str):
         """
-        Runs a search against the given site, looking for the given question and returns
-        the object containing the search data.
+        Constructor for the class searching the given StackExchange site for information.
+        Throws error if site is not found
 
         Arguments:
-            site (stackexchange.Site): The site to search for the given question
-            question (str): The question to search for
-        See:
-                ```stackexchange.Site.search```
-        Returns:
-            bool || stackexchange.Site.search: Returns ```False``` if search had no results (or failed).
-            If search was successful, the resultset of the search is returned.
-            If you want the processed results, call ```get_list_of_results```
+            site_name (str): Name of the StackExchange community site to use.
+                Please note that the name is case-sensitive
 
         """
-        # search for the given question, and retrieve those that have at least one answer
-        search = site.search_advanced(q=question, answers=1)
+        self.__result_list = list()
+        # use debugging
+        self.__use_debugging()
+        self.__site = self.__convert_user_input_to_stackexchange_site(site_name)
+
+    def process_search_results_for_question(self, question=str, use_adv_search=bool):
+        """
+        Runs a search against the set StackExchange site, looking for questions that
+        matches the content of ```question```. There are two options for the search,
+        ```search``` and ```search_advanced```. The executed search is selected from
+        the passed value ```use_adv_search```. The function returns either True or False
+        depending on whether or not the search executed successfully, and if any results
+        were found. The results are stored in a list, which can be retrieved by calling
+        ```get_list_of_results```.
+
+        Note! ```search_advanced``` can easily return several thousands of hits just
+        because one of the words in a given page matches question. Use this with
+        caution.
+
+        Arguments:
+            question (str): The question to search for
+            use_adv_search (bool): Should ```search_advanced``` be used?
+
+        See:
+            |  ```stackexchange.Site.search```
+            |  ```stackexchange.Site.search_advanced```
+
+        Returns:
+            bool: ```False```: search had no results (or failed).
+            ```True```: search was successful.
+
+        """
+        search = None
+        site = self.__site
+        # execute the selected search
+        if use_adv_search:
+            # Note! This returns basically everything without any filtering
+            # Therefore, ensure that the result has at least one answer
+            search = site.search_advanced(q=question, answers=1)
+        else:
+            search = site.search(intitle=question, pagesize=self.__PAGE_SIZE)
+        # was a result returned?
         if (search is None) or (len(search.items) == 0):
             return False
 
@@ -57,7 +107,7 @@ class SearchStackExchange:
         # I'm not sure why this happens, but it only happens for the first result page, and only
         # if the result set consists of more than one result page.
 
-        for result_sets in search:
+        for result_sets in search[:self.__PAGE_SIZE]:
             # retrieve the data
             accepted_answer_id = int(self.__is_key_in_json('accepted_answer_id', result_sets.json))
             answer_count = int(self.__is_key_in_json('answer_count', result_sets.json))
@@ -83,19 +133,32 @@ class SearchStackExchange:
             question_obj = StackExchangeQuestions(accepted_answer_id, answer_count, creation_date, is_answered, link,
                                                   question_id, score, title, view_count, user_obj)
             self.__result_list.append(question_obj)
-        return search
+        return True
 
     def get_list_of_results(self):
         """
-        Returns a list containing the data from the search. The content varies depending on the executed search
+        Returns a list containing the data from the search. Content varies depending on the executed search
 
         Returns:
              list: List with search result data
         """
         return self.__result_list
 
+    def get_question_data(self, index):
+        """
+        TODO: function for retrieving question/answer object
+
+        Arguments:
+            index:
+
+        Returns:
+
+        """
+        obj = self.__result_list[index]
+
     def __is_key_in_json(self, key=str, json_dict=json):
         """
+        Checks if the given key exists in the JSON dictionary
 
         Arguments:
             key (str): The key to check if exists in the JSON dictionary
@@ -110,6 +173,32 @@ class SearchStackExchange:
             return json_dict[key]
         else:
             return self.NO_KEY_VALUE_FOR_ENTRY
+
+    @staticmethod
+    def __use_debugging():
+        stackexchange.impose_throttling = True
+        stackexchange.throttle_stop = False
+        stackexchange.web.WebRequestManager.debug = True
+
+    def __convert_user_input_to_stackexchange_site(self, site_name=str):
+        """
+        Returns the StackExchange site based on ```site_name```
+
+        Arguments:
+            site_name (str): Name of site to convert to StackExchange.Site.
+                Please note that this is case-sensitive.
+                Example: "StackOverflow"
+
+        Returns:
+            stackexchange.Site: The selected StackExchange site
+
+        Raises:
+            AttributeError: Error if site name is not found
+
+        """
+        selected_site = getattr(stackexchange.sites, site_name)
+        selected_site = stackexchange.Site(selected_site, self.__STACK_EXCHANGE_KEY)
+        return selected_site
 
 
 class StackExchangeUser(object):
@@ -233,4 +322,3 @@ class StackExchangeQuestions(object):
 
     def get_user(self):
         return self.__user
-
