@@ -139,7 +139,6 @@ class ChatAgentXBlock(XBlock):
         """
         # get and set relevant data
         title = ""
-        response = ""
         disable_link = True
         asked_by_user = True
         edx_question_id = None
@@ -165,6 +164,8 @@ class ChatAgentXBlock(XBlock):
                 answer_list = search_stackexchange.get_question_data(0)
                 if len(answer_list) > 0:
                     body = answer_list[0].body
+                    # log this answer in the database
+                    self.__store_answer_in_database(body, res_obj.get_link(), question_id, False)
                 else:
                     body = "No answers were found for this question."
                 # display result to user
@@ -227,7 +228,7 @@ class ChatAgentXBlock(XBlock):
         return pk_question
 
     @staticmethod
-    def __store_answer_in_database(answer=str, so_link=str, question_id=int, correct_answer=bool):
+    def __store_answer_in_database(answer=str, so_link=str, question_id=long, correct_answer=bool):
         """
         Stores the currently presented answer in the database.
 
