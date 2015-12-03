@@ -144,14 +144,16 @@ class SearchStackExchange:
         """
         return self.__result_list
 
-    def get_question_data(self, index):
+    def get_question_data(self, index=int):
         """
-        TODO: function for retrieving question/answer object
+        Retrieves the Question object from the result list. The Question object
+        is based on the JSON model found in the stackexchange library.
 
         Arguments:
-            index:
+            index: Index of question object to retrieve
 
         Returns:
+            list:
 
         """
         site = self.__site
