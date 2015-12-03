@@ -1,7 +1,6 @@
 chatagent/__init__.py
 chatagent/answer.py
 chatagent/chatagent.py
-chatagent/dbconfig.py
 chatagent/mysqldatabase.py
 chatagent/question.py
 chatagent/searchstackexchange.py

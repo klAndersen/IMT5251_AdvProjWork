@@ -198,6 +198,12 @@ class ChatAgentXBlock(XBlock):
         }
         return results_dict
 
+    def __retrieve_answer(self, retrieve_correct_answer=bool, answer_list=list(), link=str, question_id=int):
+        # TODO: Retrieve correct answer - may fail
+        body = answer_list[0].body
+        # log this answer in the database
+        self.__store_answer_in_database(body, link, question_id, False)
+
     @staticmethod
     def __store_username_in_database(username=str):
         """
