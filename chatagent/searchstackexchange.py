@@ -90,7 +90,6 @@ class SearchStackExchange:
             ```True```: search was successful.
 
         """
-        search = None
         site = self.__site
         # execute the selected search
         if use_adv_search:

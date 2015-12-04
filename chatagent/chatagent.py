@@ -14,6 +14,7 @@ from xblock.core import XBlock
 from xblock.fragment import Fragment
 from xblock.fields import Scope, Dict, List
 
+from answer import Answer
 from mysqldatabase import MySQLDatabase
 from searchstackexchange import SearchStackExchange
 
@@ -31,7 +32,7 @@ class ChatAgentXBlock(XBlock):
     This is the only site that will be used in this project.
     """
 
-    __ANSWER_TEXT_LENGTH = 125
+    __ANSWER_TEXT_LENGTH = 150
     """
     The length of the returned answer displayed to the user.
     The length equals the number of characters before the
@@ -48,9 +49,11 @@ class ChatAgentXBlock(XBlock):
     )
 
     # contains all the search results
-    retrieved_results_dict = List(
-        default=[],
-        scope=Scope.content,
+    retrieved_results_list = list(
+    )
+
+    # contains all the answers
+    retrieved_answers_list = list(
     )
 
     def resource_string(self, path):
@@ -152,6 +155,7 @@ class ChatAgentXBlock(XBlock):
         """
         # get and set relevant data
         title = ""
+        read_more = ""
         disable_link = True
         asked_by_user = True
         edx_question_id = None
@@ -174,17 +178,18 @@ class ChatAgentXBlock(XBlock):
                     # TODO: handle multiple results here... for now, just retrieve the first one
                     res_obj = res_list[0]
 
+                # just retrieve the first result - this will be updated in master thesis version
                 answer_list = search_stackexchange.get_question_data(0)
                 if len(answer_list) > 0:
-                    body = answer_list[0].body
-                    # log this answer in the database
-                    self.__store_answer_in_database(body, res_obj.get_link(), question_id, False)
+                    answer_body = self.__retrieve_answer(True, answer_list, res_obj.get_link(), question_id)
                 else:
-                    body = "No answers were found for this question."
+                    answer_body = "No answers were found for this question."
                 # display result to user
-                title = "<i>" + res_obj.get_title() + "</i><p />"
-                end_text = ("<i>... Read more?</i>" if len(body) > self.__ANSWER_TEXT_LENGTH else "")
-                response = "" + body[:self.__ANSWER_TEXT_LENGTH] + end_text
+                title = "<i>" + res_obj.get_title() + "</i><p /><div id='answer_body' class='answer_body'>"
+                response = answer_body[:self.__ANSWER_TEXT_LENGTH]
+                read_more = ("<i id='read_more' class='read_more'>Read more?</i>"
+                             if len(answer_body) > self.__ANSWER_TEXT_LENGTH else "")
+                read_more += "</div>"
             else:
                 disable_link = False
                 response = "No results matching this question."
@@ -194,15 +199,53 @@ class ChatAgentXBlock(XBlock):
         results_dict = {
             'title': title,
             'response': response,
+            'read_more': read_more,
             'disable_link': disable_link
         }
         return results_dict
 
-    def __retrieve_answer(self, retrieve_correct_answer=bool, answer_list=list(), link=str, question_id=int):
-        # TODO: Retrieve correct answer - may fail
-        body = answer_list[0].body
+    def __retrieve_answer(self, select_accepted_answer=bool, answer_list=list(), link=str, question_id=long):
+        """
+        This function retrieves from the passed list the Answer that either is marked as accepted answer
+        (if it exists and ```select_accepted_answer``` is True). If not, the most highest voted answer
+        is returned. If only one answer exists, this is returned without any checks.
+
+        Arguments:
+            select_accepted_answer (bool): If it exists, should the answer marked as accepted be returned?
+            answer_list (list): The list of answer objects based on JSONModel from stackexchange
+            link (str): The link to the StackExchange site where this questions exists
+            question_id (long): The MySQL database ID for the Question
+
+        See:
+            |  ```stackexchange.Answers```
+
+        Returns:
+            str: The HTML body of the selected answer
+
+        """
+        answer_body = None
+        if len(answer_list) > 1:
+            highest_vote = -1
+            index_of_highest_voted = -1
+            index_of_accepted_answer = -1
+            # loop through answers and check for highest voted and accepted answer
+            for index in range(0, len(answer_list)):
+                if answer_list[index].is_accepted:
+                    index_of_accepted_answer = index
+                if answer_list[index].score > highest_vote:
+                    highest_vote = answer_list[index].score
+                    index_of_highest_voted = index
+            # which answer should be retrieved?
+            if select_accepted_answer and index_of_accepted_answer > -1:
+                answer_body = answer_list[index_of_accepted_answer].body
+            else:
+                answer_body = answer_list[index_of_highest_voted].body
+        elif len(answer_list) == 1:
+            # only one answer, retrieve it
+            answer_body = answer_list[0].body
         # log this answer in the database
-        self.__store_answer_in_database(body, link, question_id, False)
+        self.__store_answer_in_database(answer_body, link, question_id, False)
+        return answer_body
 
     @staticmethod
     def __store_username_in_database(username=str):
@@ -246,29 +289,113 @@ class ChatAgentXBlock(XBlock):
         pk_question = MySQLDatabase().insert_into_table_questions(question_dict)
         return pk_question
 
-    @staticmethod
-    def __store_answer_in_database(answer=str, so_link=str, question_id=long, correct_answer=bool):
+    def __store_answer_in_database(self, answer=str, se_link=str, question_id=long, is_answer_read=bool, correct_answer=bool):
         """
         Stores the currently presented answer in the database.
 
         Arguments:
             answer (str): The answer text that was retrieved and presented
-            so_link (str): The link (url) to the site where answer was retrieved from
+            se_link (str): The link (url) to the site where answer was retrieved from
             question_id (long): The ID for the question that was asked (primary key in MySQL db)
+            is_answer_read (bool): Has the read more option been clicked?
             correct_answer (bool): Is this answer accepted by the chat agent user as the correct one?
 
-        Returns:
-            bool: True if data was saved, False otherwise
-
         """
+        # temp dictionary for database insertion
         answer_dict = {
             'answer_text': answer,
-            'stackoverflow_link': so_link,
+            'stackexchange_link': se_link,
             'question_id': question_id,
+            'is_answer_read': is_answer_read,
             'correct_answer': correct_answer
         }
-        stored = MySQLDatabase().insert_into_table_answers(answer_dict)
-        return stored
+        answer_dict = MySQLDatabase().insert_into_table_answers(answer_dict)
+        answer_id = answer_dict.get("answer_id")
+        stackexchange_id = answer_dict.get("stackexchange_id")
+        answer = Answer(answer_id, answer, question_id, is_answer_read, correct_answer, stackexchange_id, se_link)
+        self.retrieved_answers_list.append(answer)
+
+    def __update_answer_in_database(self, update_all=bool, update_key=str, update_dict=dict):
+        """
+        Updates the data for the answer with the passed ID.
+
+        Arguments:
+            update_all (bool):
+            update_key (str) (None):
+            update_dict (dict): Values to update
+
+        Returns:
+             bool: True if data was updated, False otherwise.
+
+        """
+        index = 0
+        not_found = True
+        updated = False
+        answer_id = update_dict.get("answer_id")
+        # check that an answer with given ID exists
+        while not_found and index < len(self.retrieved_answers_list):
+            answer = self.retrieved_answers_list[index]
+            if answer.get_answer_id() == answer_id:
+                not_found = False
+            index += index
+        if not_found is False:
+            if update_key is not None and not self.__does_key_match_answer_dictionary(update_key):
+                raise ValueError("The given key does not match the existing key set.")
+            updated = MySQLDatabase().update_tbl_answers(update_key, update_dict, update_all)
+        if updated:
+            self.__update_answer_list(index, update_all, update_key, update_dict)
+
+    def __update_answer_list(self, index=int, update_all=bool, update_key=None, update_dict=dict):
+        """
+        Updates the object data in the list based on the values in the ```update_dict```.
+        For now, this function only updates for all entries, not singular values.
+
+        Arguments:
+            index (int): The index of the Answer object to update
+            update_all (bool): Should all attributes be updated?
+            update_key (str) (None): If only one value was updated, pass the key to that value in ```update_dict```
+            update_dict (dict): Dictionary containing the values that were changed
+
+        """
+        if update_all:
+            orig_answer = self.retrieved_answers_list[index]
+            answer_id = orig_answer.get_answer_id()
+            answer_text = update_dict.get("answer_text")
+            is_answer_read = update_dict.get("is_answer_read")
+            correct_answer = update_dict.get("correct_answer")
+            question_id = update_dict.get("question_id")
+            stackexchange_id = update_dict.get("stackexchange_id")
+            stackexchange_link = orig_answer.get_stackexchange_link()
+            updated_answer = Answer(answer_id, answer_text, question_id, is_answer_read, correct_answer,
+                                    stackexchange_id, stackexchange_link)
+            self.retrieved_answers_list[index] = updated_answer
+        else:
+            # TODO: Implement check that only updates the given value
+            pass
+
+    @staticmethod
+    def __does_key_match_answer_dictionary(update_key=str):
+        """
+        Check if the passed key matches the expected values in the answer dictionary
+
+        Arguments:
+            update_key (str) (None): The key for the value to update
+
+        Returns:
+            bool: True if key exists, false otherwise
+        """
+        # dummy dictionary with dummy data - just to confirm that key is valid
+        answer_dictionary = {
+                'answer_id': 0,
+                'answer_text': "dummy",
+                'question_id': 0,
+                'is_answer_read': 0,
+                'correct_answer': 0,
+                'stackexchange_id': 0,
+        }
+        if update_key in answer_dictionary:
+            return True
+        return False
 
     @staticmethod
     def workbench_scenarios():

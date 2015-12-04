@@ -2,35 +2,63 @@
 function ChatAgentXBlock(runtime, element) {
     /**
      * HTML newline used in the chatbox
+     * @type {string}
      * @const
      */
     var HTML_NEWLINE = "<p />";
     /**
      * The name of the Chat Agent (With HTML formatting for display in the chatbox).
+     * @type {string}
      * @const
      */
     var CHAT_AGENT_NAME = "<strong>Mimmi:</strong> ";
     /**
      * The HTML id of the users input field
+     * @type {string}
      * @const
      */
     var USER_INPUT_FIELD_ID = "#userInput";
     /**
      * The HTML id of the <div> containing the chatbox output field
+     * @type {string}
      * @const
      */
     var CHATBOX_ID = "#chatbox";
     /**
+     * The HTML id of the element containing the 'Read more' option
+     * @type {string}
+     */
+    var READ_MORE_ID = "#read_more";
+    /**
+     * Constant indicating that answer should be shown (Read more option)
+     * @type {string}
+     * @const
+     */
+    var SHOW_ANSWER = "Read more?";
+    /**
+     * Constant indicating that answer should be hidden (Read More option)
+     * @type {string}
+     * @const
+     */
+    var HIDE_ANSWER = "Hide answer?";
+    /**
      * The name of the currently active user of this application.
      * The value of USER_NAME is set in the function `getAndSetUsername`.
      * Marked as const, because it is not intended for this to be changed (except in `getAndSetUsername`).
+     * @type {string}
      * @see #getAndSetUsername
      */
     var USER_NAME = "";
     /**
      * Variable for if the welcome message has been displayed yet.
+     * @type {boolean}
      */
     var is_welcome_msg_shown = false;
+    /**
+     * Array containing retrieved StackExchanged answers
+     * @type {Array}
+     */
+    var answer_array = [];
 
     /**
      * Prints the default welcome message into the chatbox. This should only be called once
@@ -64,8 +92,7 @@ function ChatAgentXBlock(runtime, element) {
     } //getAndSetUsername
 
     /**
-     * Updates the chatbox with the users input and the results from the Chat Agent.
-     * The results are based on the passed input from the user.
+     * Updates the chatbox based on the users input.
      * @param screenname {string} User name
      * @param input {string} User input
      */
@@ -74,10 +101,7 @@ function ChatAgentXBlock(runtime, element) {
          TODO:
          - Ask user for confirmation (Correct answer: Yes, No, New question)
          */
-        var title = "";
-        var chatlog = "";
-        var response = "";
-        var disableLink = false;
+        var chatLog = "";
         var is_input_no = false;
         var is_input_yes = false;
         var shouldInputBeYesOrNo = false;
@@ -91,9 +115,9 @@ function ChatAgentXBlock(runtime, element) {
         $(CHATBOX_ID).append(HTML_NEWLINE);
         // quick & dirty test code: should answer be yes or no?
         if (shouldInputBeYesOrNo && !is_input_yes && !is_input_no) {
-            chatlog = CHAT_AGENT_NAME + "Is this the question you are looking for?";
-            chatlog += HTML_NEWLINE + " Please enter 'Yes' or 'No'." + HTML_NEWLINE;
-            $(CHATBOX_ID).append(chatlog);
+            chatLog = CHAT_AGENT_NAME + "Is this the question you are looking for?";
+            chatLog += HTML_NEWLINE + " Please enter 'Yes' or 'No'." + HTML_NEWLINE;
+            $(CHATBOX_ID).append(chatLog);
         } else if (shouldInputBeYesOrNo && is_input_yes) {
             //use default edx question
             //show rest of answer
@@ -104,23 +128,48 @@ function ChatAgentXBlock(runtime, element) {
             //ask user if next answer should be retrieved
             console.log("answer is no");
         } else {
-            //create JSON format for input
-            var json_input = {'user_input': input};
-            invoke('handle_user_input', json_input, function (data) {
-                title = data['title'];
-                response = data['response'];
-                disableLink = data['disable_link'];
-                //check if links should be removed, and if the answer contains hyperlink
-                if (disableLink && response.indexOf("<a ") >= 0) {
-                    //remove first occurrence of <a>
-                    response = $(response + " a:first").text();
-                } //if
-                chatlog = CHAT_AGENT_NAME + title + response + HTML_NEWLINE;
-                console.log(chatlog);
-                $(CHATBOX_ID).append(chatlog);
-            }); //invoke
+            processUsersQuestion(input);
         } //if
     } //updateChatLog
+
+    /**
+     * Processes the users input as a question,
+     * and uses it to retrieve an answer from
+     * the given StackExchange site
+     * @param input {string} User input
+     */
+    function processUsersQuestion(input) {
+        var title = "";
+        var chatLog = "";
+        var response = "";
+        var readMore = "";
+        var disableLink = false;
+        //create JSON format for input
+        var json_input = {'user_input': input};
+        invoke('handle_user_input', json_input, function (data) {
+            title = data['title'];
+            response = data['response'];
+            readMore = data['read_more'];
+            disableLink = data['disable_link'];
+            //check if links should be removed, and if the answer contains hyperlink
+            if (disableLink && response.indexOf("<a ") >= 0) {
+                //remove first occurrence of <a>
+                response = $(response + " a:first").text();
+                answer_array.push(response);
+            } //if
+            chatLog = CHAT_AGENT_NAME + title + response + readMore + HTML_NEWLINE;
+            console.log(chatLog);
+            $(CHATBOX_ID).append(chatLog);
+        }); //invoke
+    } //processUsersQuestion
+
+    function displaySelectedAnswer(readMore) {
+        if (answer_array.length > 0) {
+            if (readMore) {
+            } else {
+            } //if
+        } //if
+    } //displaySelectedAnswer
 
     /**
      * Invoke function for retrieving data from the Edx XBlock.
@@ -146,7 +195,6 @@ function ChatAgentXBlock(runtime, element) {
                 500: function() {
                     statusCode = 500;
                     errorMsg = statusCode + ": Internal Server Error.";
-                    console.log(errorMsg);
                     $(CHATBOX_ID).append(CHAT_AGENT_NAME + " " + errorMsg + HTML_NEWLINE);
                 } //500
             } //statuscode
@@ -180,6 +228,16 @@ function ChatAgentXBlock(runtime, element) {
             return false;
         }); //$('#btnSubmit')
 
+        //read more has been clicked
+        $(CHATBOX_ID).on("click", READ_MORE_ID, function () {
+            console.log($(this).text());
+            var value = $(this).text();
+            if (value == HIDE_ANSWER) {
+                $(this).text(SHOW_ANSWER);
+            } else {
+                $(this).text(HIDE_ANSWER);
+            } //if
+        }); // $(CHATBOX_ID).on
     }); //$(function ($)
 
 } //ChatAgentXBlock

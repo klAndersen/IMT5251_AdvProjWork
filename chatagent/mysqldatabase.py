@@ -20,14 +20,14 @@ class MySQLDatabase:
     __TBL_ANSWERS = "tblChatAnswers"
     __TBL_CHAT_USERS = "tblChatUsers"
     __TBL_USER_FEEDBACK = "tblUserFeedback"
-    __TBL_STACKOVERFLOW = "tblStackOverflow"
+    __TBL_STACKEXCHANGE = "tblStackExchange"
     __TBL_QUESTIONS = "tblChatQuestions"
     __TBL_FEEDBACK_QUESTIONS = "tblFeedbackQuestions"
     # "Constant" values: Primary keys
     __PK_USERS = "chatUserID"
     __PK_QUESTIONS = "chatQuestionID"
     __PK_ANSWERS = "chatAnswersID"
-    __PK_STACKOVERFLOW = "stackoverflowID"
+    __PK_STACKEXCHANGE = "stackexchangeID"
 
     def __init__(self):
         """
@@ -71,7 +71,7 @@ class MySQLDatabase:
             query = "SELECT *  FROM " \
                     + self.__TBL_ANSWERS + ", " \
                     + self.__TBL_QUESTIONS + ", " \
-                    + self.__TBL_STACKOVERFLOW
+                    + self.__TBL_STACKEXCHANGE
             # if there is a WHERE clause, add it
             if where is not None:
                 query += " " + where
@@ -166,42 +166,44 @@ class MySQLDatabase:
             answer_dictionary (dict):
                 |  Expects a dictionary containing the following keys/values:
                 |  - answer_text (str): The answer that was found
+                |  - is_answer_read (bool): Has the 'read more' been clicked?
                 |  - correct_answer (bool): Value for whether or not this answer was accepted by the user
                 |  - question_id (int): The (MySQL) Question ID of the question that was asked
-                |  - stackoverflow_link (str): The link (URL) to the page where the answer was retrieved from
+                |  - stackexchange_link (str): The link (URL) to the page where the answer was retrieved from
 
         Returns:
-            bool:
-            |  True: Data was saved.
-            |  False: Data was not saved
+            dict: Updated dictionary containing the passed values, but where ```stackexchange_link```
+            have been swapped with ```stackexchange_id```, and the primary key for the inserted answer
+            has been added with key ```answer_id```
 
         """
-        data_saved = False
         query = "INSERT INTO " + self.__TBL_ANSWERS + " VALUES (" \
                 + "null, " \
                 + "%(answer_text)s, " \
+                + "%(is_answer_read)s, " \
                 + "%(correct_answer)s, " \
-                + "%(stackoverflow_id)s, " \
+                + "%(stackexchange_id)s, " \
                 + "%(question_id)s " \
                 + ");"
         try:
             cursor = self.__get_db_cursor()
             # insert (or retrieve) the link and get its primary key
-            temp_dict = {'stackoverflow_link': answer_dictionary.get('stackoverflow_link')}
-            stackoverflow_id = self.__insert_into_table_stackoverflow(temp_dict)
+            temp_dict = {'stackexchange_link': answer_dictionary.get('stackexchange_link')}
+            stackexchange_id = self.__insert_into_table_stackexchange(temp_dict)
             # was a primary key returned?
-            if stackoverflow_id == self.PRIMARY_KEY_NOT_FOUND:
-                return data_saved
-            # update the dictionary by removing the link, and adding the stackoverflow id
-            answer_dictionary.pop('stackoverflow_link', None)
-            answer_dictionary.update({'stackoverflow_id': stackoverflow_id})
+            if stackexchange_id == self.PRIMARY_KEY_NOT_FOUND:
+                return self.PRIMARY_KEY_NOT_FOUND
+            # update the dictionary by removing the link, and adding the stackexchange id
+            answer_dictionary.pop('stackexchange_link', None)
+            answer_dictionary.update({'stackexchange_id': stackexchange_id})
             cursor.execute(query, answer_dictionary)
-            data_saved = True
+            # add the primary key for the inserted data
+            answer_dictionary.update({'answer_id': cursor.lastrowid})
         except MySQLdb.Error as err:
             print("MySQLdb.Error (INS ANS): %s", err)
         finally:
             self.__close_db_connection()
-        return data_saved
+        return answer_dictionary
 
     def insert_into_table_user_feedback(self, user_feedback_dictionary=dict):
         """
@@ -234,6 +236,52 @@ class MySQLDatabase:
             data_saved = True
         except MySQLdb.Error as err:
             print("MySQLdb.Error: %s", err)
+        finally:
+            self.__close_db_connection()
+        return data_saved
+
+    def update_tbl_answers(self, update_key=None, answer_dictionary=dict, update_all=bool):
+        """
+        Updates the answer data in the database
+
+        Arguments:
+            update_key (str) (None): Key for value to update (if only one value is to be changed)
+            answer_dictionary (dict):
+                |  Expects a dictionary containing one or more of the following keys/values:
+                |  - answer_id (long): Mandatory. The ID of answer to update
+                |  - answer_text (str): The answer text
+                |  - is_answer_read (bool): Has the 'read more' been clicked?
+                |  - correct_answer (bool): Value for whether or not this answer was accepted by the user
+                |  - question_id (int): The (MySQL) Question ID of the question that was asked
+                |  - stackexchange_id (long): ID belonging to the StackOverflow link where answer was retrieved from
+            update_all (bool): True: Update all values. False: Update value based on passed key
+
+        Returns:
+            bool: True if data was updated, false otherwise.
+        """
+        data_saved = False
+        answer_id = answer_dictionary.get("answer_id")
+        if type(answer_id) is not long and type(answer_id) is not int:
+            raise ValueError("Answer ID must be an Integer!")
+        if update_all:
+            query = "UPDATE " + self.__TBL_ANSWERS + " SET " \
+                    + "answer_text=%(answer_text)s, " \
+                    + "is_answer_read=%(is_answer_read)s, " \
+                    + "correct_answer=%(correct_answer)s, " \
+                    + "fk_tblStackExchange=%(stackexchange_id)s, " \
+                    + "fk_tblChatQuestions=%(question_id)s " \
+                    + "WHERE chatAnswersID=%(answer_id)s"
+        else:
+            # TODO: Add check for value(s) to change
+            query = "UPDATE " + self.__TBL_ANSWERS + " SET " \
+                    + update_key + "=%(" + update_key + ")" \
+                    + "WHERE chatAnswersID=%(answer_id)s"
+        try:
+            cursor = self.__get_db_cursor()
+            cursor.execute(query, answer_dictionary)
+            data_saved = True
+        except MySQLdb.Error as err:
+            print("MySQLdb.Error (UPD ANS): %s", err)
         finally:
             self.__close_db_connection()
         return data_saved
@@ -279,35 +327,35 @@ class MySQLDatabase:
             self.__close_db_connection()
         return result_set
 
-    def __insert_into_table_stackoverflow(self, stackoverflow_dictionary=dict):
+    def __insert_into_table_stackexchange(self, stackexchange_dictionary=dict):
         """
         Stores the link to StackOverflow where the answer(s) was retrieved from in the MySQL database.
         Note! This function does not close the database connection.
 
         Arguments:
-            stackoverflow_dictionary (dict):
+            stackexchange_dictionary (dict):
                     |  Expects a dictionary containing the following keys/values:
-                    |  - stackoverflow_link (str): The link (URL) to the page where the answer was retrieved from
+                    |  - stackexchange_link (str): The link (URL) to the page where the answer was retrieved from
 
         Returns:
             long: The primary key of the inserted link
 
         """
-        pk_stackoverflow = self.__check_if_stackoverflow_link_exists(stackoverflow_dictionary)
-        if pk_stackoverflow > self.PRIMARY_KEY_NOT_FOUND:
-            return pk_stackoverflow
-        query = "INSERT INTO " + self.__TBL_STACKOVERFLOW + " VALUES (" \
+        pk_stackexchange = self.__check_if_stackexchange_link_exists(stackexchange_dictionary)
+        if pk_stackexchange > self.PRIMARY_KEY_NOT_FOUND:
+            return pk_stackexchange
+        query = "INSERT INTO " + self.__TBL_STACKEXCHANGE + " VALUES (" \
                 + "null, " \
-                + "%(stackoverflow_link)s, " \
+                + "%(stackexchange_link)s, " \
                 + "NOW()" \
                 + ");"
         try:
             cursor = self.__get_db_cursor()
-            cursor.execute(query, stackoverflow_dictionary)
-            pk_stackoverflow = cursor.lastrowid
+            cursor.execute(query, stackexchange_dictionary)
+            pk_stackexchange = cursor.lastrowid
         except MySQLdb.Error as err:
             print("MySQLdb.Error (INS SO): %s", err)
-        return pk_stackoverflow
+        return pk_stackexchange
 
     def __check_if_user_exists(self, user_dictionary=dict):
         """
@@ -365,27 +413,27 @@ class MySQLDatabase:
             print("MySQLdb.Error (SO_ID): %s", err)
         return self.PRIMARY_KEY_NOT_FOUND
 
-    def __check_if_stackoverflow_link_exists(self, stackoverflow_dictionary=dict):
+    def __check_if_stackexchange_link_exists(self, stackexchange_dictionary=dict):
         """
         Checks if the given link is already registered in the database.
 
         Arguments:
-            stackoverflow_dictionary (dict):
-                |  The link to the relevant stackoverflow page.
-                |  Expects key to be ```stackoverflow_link```.
+            stackexchange_dictionary (dict):
+                |  The link to the relevant stackexchange page.
+                |  Expects key to be ```stackexchange_link```.
 
         Returns:
             long: Primary key || ```PRIMARY_KEY_NOT_FOUND```
 
         """
         try:
-            pk_name = self.__PK_STACKOVERFLOW
-            table_name = self.__TBL_STACKOVERFLOW
-            where = "WHERE stackoverflow_link = %(stackoverflow_link)s"
-            where_args = {'stackoverflow_link': stackoverflow_dictionary.get('stackoverflow_link')}
-            stackoverflow_id = self.__get_primary_key_of_table(pk_name, table_name, where, where_args)
-            if stackoverflow_id > self.PRIMARY_KEY_NOT_FOUND:
-                return stackoverflow_id
+            pk_name = self.__PK_STACKEXCHANGE
+            table_name = self.__TBL_STACKEXCHANGE
+            where = "WHERE stackexchange_link = %(stackexchange_link)s"
+            where_args = {'stackexchange_link': stackexchange_dictionary.get('stackexchange_link')}
+            stackexchange_id = self.__get_primary_key_of_table(pk_name, table_name, where, where_args)
+            if stackexchange_id > self.PRIMARY_KEY_NOT_FOUND:
+                return stackexchange_id
         except ValueError as err:
             print("Error: %s", err)
         except MySQLdb.Error as err:
