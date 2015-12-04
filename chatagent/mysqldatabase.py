@@ -258,6 +258,7 @@ class MySQLDatabase:
 
         Returns:
             bool: True if data was updated, false otherwise.
+
         """
         data_saved = False
         answer_id = answer_dictionary.get("answer_id")
@@ -272,9 +273,9 @@ class MySQLDatabase:
                     + "fk_tblChatQuestions=%(question_id)s " \
                     + "WHERE chatAnswersID=%(answer_id)s"
         else:
-            # TODO: Add check for value(s) to change
+            # TODO: Add check for value(s) to change. For now, it just updates the 'is_answer_read'
             query = "UPDATE " + self.__TBL_ANSWERS + " SET " \
-                    + update_key + "=%(" + update_key + ")" \
+                    + "is_answer_read=%(" + update_key + ")s " \
                     + "WHERE chatAnswersID=%(answer_id)s"
         try:
             cursor = self.__get_db_cursor()
@@ -293,7 +294,7 @@ class MySQLDatabase:
         This function takes a list as input, where you can add one or more table names
         to retrieve all the data from. The passed list is converted to a tuple for
         string interpolation. Therefore, user data should not be passed to this function,
-        since table names cannot be parameterized (it is neither the intention that this
+        since table names cannot be parametrized (it is neither the intention that this
         function should be called/used through user input).
 
         Arguments:

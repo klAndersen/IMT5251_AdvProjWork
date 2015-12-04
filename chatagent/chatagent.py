@@ -10,6 +10,9 @@ related to Programming by looking at posted answers on StackOverflow
 
 import pkg_resources
 
+import Queue
+import threading
+
 from xblock.core import XBlock
 from xblock.fragment import Fragment
 from xblock.fields import Scope, Dict, List
@@ -39,7 +42,6 @@ class ChatAgentXBlock(XBlock):
     text gets cut off with a 'Read more?'
     """
 
-    # contains the active users data
     user_dict = Dict(
         default={
             'user_id': 0,
@@ -47,14 +49,26 @@ class ChatAgentXBlock(XBlock):
         },
         scope=Scope.content,
     )
+    """
+    This dictionary contains the user data related to the logged in user
+    """
 
-    # contains all the search results
-    retrieved_results_list = list(
-    )
+    retrieved_results_list = list()
+    """
+    This list contains all the search results that has been retrieved
+    (currently not in use)
+    """
 
-    # contains all the answers
-    retrieved_answers_list = list(
-    )
+    retrieved_answers_list = list()
+    """
+    This list contains all the answers that have been presented to the user
+    """
+
+    updated_answers_list = list()
+    """
+    This list contains all answers that have been updated
+    (to avoid re-updating answers that have already been read)
+    """
 
     def resource_string(self, path):
         """
@@ -149,14 +163,13 @@ class ChatAgentXBlock(XBlock):
              |  results_dict = {
              |         'title': title,
              |         'response': response,
-             |         'disable_link': disable_link
+             |         'read_more': read_more,
              |     }
 
         """
         # get and set relevant data
         title = ""
         read_more = ""
-        disable_link = True
         asked_by_user = True
         edx_question_id = None
         use_adv_search = False
@@ -185,13 +198,18 @@ class ChatAgentXBlock(XBlock):
                 else:
                     answer_body = "No answers were found for this question."
                 # display result to user
-                title = "<i>" + res_obj.get_title() + "</i><p /><div id='answer_body' class='answer_body'>"
+                answer_index = len(self.retrieved_answers_list) - 1
+                title = "<i>" + res_obj.get_title() + "</i><p /><div id='answer_body' " \
+                                                      "class='answer_body' data-index='" + str(answer_index) + "'>"
                 response = answer_body[:self.__ANSWER_TEXT_LENGTH]
-                read_more = ("<i id='read_more' class='read_more'>Read more?</i>"
+                read_more = ("</div>"
+                             "<div id='read_more' id='read_more'>"
+                             "<strong style='cursor: pointer' id='read_more_text' "
+                             "class='read_more_text'>Read more?</strong>"
+                             "<input id='answer_index' class='answer_index' name='answer_index'"
+                             "value='" + str(answer_index) + "' type='hidden'></div>"
                              if len(answer_body) > self.__ANSWER_TEXT_LENGTH else "")
-                read_more += "</div>"
             else:
-                disable_link = False
                 response = "No results matching this question."
         except AttributeError, err:
             response = "An error occurred during processing. The error is: " + str(err)
@@ -200,7 +218,54 @@ class ChatAgentXBlock(XBlock):
             'title': title,
             'response': response,
             'read_more': read_more,
-            'disable_link': disable_link
+        }
+        return results_dict
+
+    @XBlock.json_handler
+    def show_or_hide_answer_text(self, data, suffix=''):
+        """
+        Some answers may have a long text to them, which means
+        they are not always shown full text. This function takes
+        the current view mode, and either returns the full text
+        or the partial text for display.
+
+        Arguments:
+            data (dict): JSON dictionary containing answer index
+                and whether answer should be hidden or shown
+            suffix (str):
+
+        Returns:
+             dict:
+             |  results_dict = {
+             |  'index': index,
+             |  'response': response
+             |  }
+        """
+        response = ''
+        index = int(data['index'])
+        read_more = data['read_more']
+        answer_list = self.retrieved_answers_list
+        # is the index valid?
+        if len(answer_list) > index > -1:
+            answer = answer_list[index]
+            # which version of answer should be displayed?
+            if read_more:
+                response = answer.get_answer_text()
+                update_dict = {
+                    'answer_id': answer.get_answer_id(),
+                    # 'answer_text': answer.get_answer_text(),
+                    # 'question_id': answer.get_question_id(),
+                    'is_answer_read': True,
+                    # 'correct_answer': 0,
+                    # 'stackexchange_id': answer.get_stackexchange_id(),
+                }
+                # TODO: Database update too slow!
+                # self.__update_answer_in_database(False, "is_answer_read", update_dict)
+            else:
+                response = answer.get_answer_text()[:self.__ANSWER_TEXT_LENGTH]
+        results_dict = {
+            'index': index,
+            'response': response
         }
         return results_dict
 
@@ -320,9 +385,9 @@ class ChatAgentXBlock(XBlock):
         Updates the data for the answer with the passed ID.
 
         Arguments:
-            update_all (bool):
-            update_key (str) (None):
-            update_dict (dict): Values to update
+            update_all (bool): Update all values for this answer
+            update_key (str) (None): Key for value to update (if single value)
+            update_dict (dict): Value(s) to update
 
         Returns:
              bool: True if data was updated, False otherwise.
@@ -332,18 +397,25 @@ class ChatAgentXBlock(XBlock):
         not_found = True
         updated = False
         answer_id = update_dict.get("answer_id")
-        # check that an answer with given ID exists
-        while not_found and index < len(self.retrieved_answers_list):
-            answer = self.retrieved_answers_list[index]
-            if answer.get_answer_id() == answer_id:
+        # check if the given answer already has been updated
+        while not_found and index < len(self.updated_answers_list):
+            if answer_id == self.updated_answers_list[index]:
                 not_found = False
             index += index
-        if not_found is False:
-            if update_key is not None and not self.__does_key_match_answer_dictionary(update_key):
-                raise ValueError("The given key does not match the existing key set.")
-            updated = MySQLDatabase().update_tbl_answers(update_key, update_dict, update_all)
-        if updated:
-            self.__update_answer_list(index, update_all, update_key, update_dict)
+        if not_found:
+            index = 0
+            # if the answer hasn't been updated, does it exist?
+            while not_found and index < len(self.retrieved_answers_list):
+                answer = self.retrieved_answers_list[index]
+                if answer.get_answer_id() == answer_id:
+                    not_found = False
+                index += index
+            if not_found is False:
+                if update_key is not None and not self.__does_key_match_answer_dictionary(update_key):
+                    raise ValueError("The given key does not match the existing key set.")
+                updated = MySQLDatabase().update_tbl_answers(update_key, update_dict, update_all)
+            if updated:
+                self.__update_answer_list(index, update_all, update_key, update_dict)
 
     def __update_answer_list(self, index=int, update_all=bool, update_key=None, update_dict=dict):
         """
@@ -369,9 +441,21 @@ class ChatAgentXBlock(XBlock):
             updated_answer = Answer(answer_id, answer_text, question_id, is_answer_read, correct_answer,
                                     stackexchange_id, stackexchange_link)
             self.retrieved_answers_list[index] = updated_answer
+            self.updated_answers_list.append(answer_id)
         else:
-            # TODO: Implement check that only updates the given value
-            pass
+            orig_answer = self.retrieved_answers_list[index]
+            answer_id = orig_answer.get_answer_id()
+            answer_text = orig_answer.get_answer_text()
+            is_answer_read = update_dict.get("is_answer_read")
+            correct_answer = orig_answer.get_is_correct_answer()
+            question_id = orig_answer.get_question_id()
+            stackexchange_id = orig_answer.get_stackexchange_id()
+            stackexchange_link = orig_answer.get_stackexchange_link()
+            updated_answer = Answer(answer_id, answer_text, question_id, is_answer_read, correct_answer,
+                                    stackexchange_id, stackexchange_link)
+            self.retrieved_answers_list[index] = updated_answer
+            self.updated_answers_list.append(answer_id)
+
 
     @staticmethod
     def __does_key_match_answer_dictionary(update_key=str):
@@ -386,12 +470,12 @@ class ChatAgentXBlock(XBlock):
         """
         # dummy dictionary with dummy data - just to confirm that key is valid
         answer_dictionary = {
-                'answer_id': 0,
-                'answer_text': "dummy",
-                'question_id': 0,
-                'is_answer_read': 0,
-                'correct_answer': 0,
-                'stackexchange_id': 0,
+            'answer_id': 0,
+            'answer_text': "dummy",
+            'question_id': 0,
+            'is_answer_read': 0,
+            'correct_answer': 0,
+            'stackexchange_id': 0,
         }
         if update_key in answer_dictionary:
             return True

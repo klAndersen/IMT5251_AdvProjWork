@@ -28,7 +28,7 @@ function ChatAgentXBlock(runtime, element) {
      * The HTML id of the element containing the 'Read more' option
      * @type {string}
      */
-    var READ_MORE_ID = "#read_more";
+    var READ_MORE_TEXT_ID = "#read_more_text";
     /**
      * Constant indicating that answer should be shown (Read more option)
      * @type {string}
@@ -54,11 +54,6 @@ function ChatAgentXBlock(runtime, element) {
      * @type {boolean}
      */
     var is_welcome_msg_shown = false;
-    /**
-     * Array containing retrieved StackExchanged answers
-     * @type {Array}
-     */
-    var answer_array = [];
 
     /**
      * Prints the default welcome message into the chatbox. This should only be called once
@@ -143,39 +138,23 @@ function ChatAgentXBlock(runtime, element) {
         var chatLog = "";
         var response = "";
         var readMore = "";
-        var disableLink = false;
         //create JSON format for input
         var json_input = {'user_input': input};
         invoke('handle_user_input', json_input, function (data) {
             title = data['title'];
             response = data['response'];
             readMore = data['read_more'];
-            disableLink = data['disable_link'];
-            //check if links should be removed, and if the answer contains hyperlink
-            if (disableLink && response.indexOf("<a ") >= 0) {
-                //remove first occurrence of <a>
-                response = $(response + " a:first").text();
-                answer_array.push(response);
-            } //if
+            response = $(response + " a:first").text();
             chatLog = CHAT_AGENT_NAME + title + response + readMore + HTML_NEWLINE;
-            console.log(chatLog);
             $(CHATBOX_ID).append(chatLog);
         }); //invoke
     } //processUsersQuestion
-
-    function displaySelectedAnswer(readMore) {
-        if (answer_array.length > 0) {
-            if (readMore) {
-            } else {
-            } //if
-        } //if
-    } //displaySelectedAnswer
 
     /**
      * Invoke function for retrieving data from the Edx XBlock.
      * @param method {string} Name of function to call from XBlocks
      * @param data {object} Data to process || null
-     * @param onSuccess {function (data)} Action to execute on sucessfull POST (e.g. data processing)
+     * @param onSuccess {function (data)} Action to execute on successful POST (e.g. data processing)
      */
     function invoke(method, data, onSuccess) {
         var statusCode = 0;
@@ -197,7 +176,7 @@ function ChatAgentXBlock(runtime, element) {
                     errorMsg = statusCode + ": Internal Server Error.";
                     $(CHATBOX_ID).append(CHAT_AGENT_NAME + " " + errorMsg + HTML_NEWLINE);
                 } //500
-            } //statuscode
+            } //statusCode
         }); //$.ajax
     } //invoke
 
@@ -229,14 +208,31 @@ function ChatAgentXBlock(runtime, element) {
         }); //$('#btnSubmit')
 
         //read more has been clicked
-        $(CHATBOX_ID).on("click", READ_MORE_ID, function () {
-            console.log($(this).text());
-            var value = $(this).text();
-            if (value == HIDE_ANSWER) {
+        $(CHATBOX_ID).on("click", READ_MORE_TEXT_ID, function () {
+            var showMore = false;
+            var readMore = $(this).text();
+            //since the parent of the read_more_text is a <div>, and the
+            //<div> contains both read_more_text and the hidden element with
+            //the index, find the child of the parent with the ID answer_index
+            var inputAnswerIndex = $(this).parent().find("#answer_index");
+            var index = $(inputAnswerIndex).val();
+            if (readMore == HIDE_ANSWER) {
+                showMore = false;
                 $(this).text(SHOW_ANSWER);
             } else {
+                showMore = true;
                 $(this).text(HIDE_ANSWER);
             } //if
+            var answer_display = {
+                'index': index,
+                'read_more': showMore
+            };
+            invoke('show_or_hide_answer_text', answer_display, function (data) {
+                var index = data['index'];
+                var answer_text = data['response'];
+                var answer_body = $(CHATBOX_ID).find("[data-index='" + index + "']");
+                $(answer_body).html(answer_text);
+            });
         }); // $(CHATBOX_ID).on
     }); //$(function ($)
 
