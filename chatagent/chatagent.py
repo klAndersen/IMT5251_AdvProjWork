@@ -259,7 +259,6 @@ class ChatAgentXBlock(XBlock):
                         # 'correct_answer': 0,
                         # 'stackexchange_id': answer.get_stackexchange_id(),
                     }
-                    # TODO: Database update too slow!
                     self.__update_answer_in_database(False, "is_answer_read", update_dict)
             else:
                 response = answer.get_answer_text()[:self.__ANSWER_TEXT_LENGTH]
@@ -457,7 +456,6 @@ class ChatAgentXBlock(XBlock):
                                     stackexchange_id, stackexchange_link)
             self.retrieved_answers_list[index] = updated_answer
             self.updated_answers_list.append(answer_id)
-
 
     @staticmethod
     def __does_key_match_answer_dictionary(update_key=str):
