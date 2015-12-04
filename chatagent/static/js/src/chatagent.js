@@ -145,7 +145,9 @@ function ChatAgentXBlock(runtime, element) {
             response = data['response'];
             readMore = data['read_more'];
             response = $(response + " a:first").text();
-            chatLog = CHAT_AGENT_NAME + title + response + readMore + HTML_NEWLINE;
+            chatLog = CHAT_AGENT_NAME + title + response + readMore;
+            //using <br /> for extra space between question/answer
+            chatLog += "<br />";
             $(CHATBOX_ID).append(chatLog);
         }); //invoke
     } //processUsersQuestion
@@ -227,6 +229,7 @@ function ChatAgentXBlock(runtime, element) {
                 'index': index,
                 'read_more': showMore
             };
+            //update the displayed answer text
             invoke('show_or_hide_answer_text', answer_display, function (data) {
                 var index = data['index'];
                 var answer_text = data['response'];

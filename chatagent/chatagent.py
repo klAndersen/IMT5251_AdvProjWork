@@ -10,12 +10,9 @@ related to Programming by looking at posted answers on StackOverflow
 
 import pkg_resources
 
-import Queue
-import threading
-
 from xblock.core import XBlock
 from xblock.fragment import Fragment
-from xblock.fields import Scope, Dict, List
+from xblock.fields import Scope, Dict
 
 from answer import Answer
 from mysqldatabase import MySQLDatabase
@@ -240,6 +237,7 @@ class ChatAgentXBlock(XBlock):
              |  'index': index,
              |  'response': response
              |  }
+
         """
         response = ''
         index = int(data['index'])
@@ -251,16 +249,18 @@ class ChatAgentXBlock(XBlock):
             # which version of answer should be displayed?
             if read_more:
                 response = answer.get_answer_text()
-                update_dict = {
-                    'answer_id': answer.get_answer_id(),
-                    # 'answer_text': answer.get_answer_text(),
-                    # 'question_id': answer.get_question_id(),
-                    'is_answer_read': True,
-                    # 'correct_answer': 0,
-                    # 'stackexchange_id': answer.get_stackexchange_id(),
-                }
-                # TODO: Database update too slow!
-                # self.__update_answer_in_database(False, "is_answer_read", update_dict)
+                if len(answer_list) > index > -1:
+                    answer = answer_list[index]
+                    update_dict = {
+                        'answer_id': answer.get_answer_id(),
+                        # 'answer_text': answer.get_answer_text(),
+                        # 'question_id': answer.get_question_id(),
+                        'is_answer_read': True,
+                        # 'correct_answer': 0,
+                        # 'stackexchange_id': answer.get_stackexchange_id(),
+                    }
+                    # TODO: Database update too slow!
+                    self.__update_answer_in_database(False, "is_answer_read", update_dict)
             else:
                 response = answer.get_answer_text()[:self.__ANSWER_TEXT_LENGTH]
         results_dict = {
@@ -401,21 +401,23 @@ class ChatAgentXBlock(XBlock):
         while not_found and index < len(self.updated_answers_list):
             if answer_id == self.updated_answers_list[index]:
                 not_found = False
-            index += index
+            index += 1
         if not_found:
-            index = 0
+            index = -1
+            max_size = len(self.retrieved_answers_list) - 1
             # if the answer hasn't been updated, does it exist?
-            while not_found and index < len(self.retrieved_answers_list):
+            while not_found and index <= max_size:
                 answer = self.retrieved_answers_list[index]
+                index += 1
                 if answer.get_answer_id() == answer_id:
                     not_found = False
-                index += index
             if not_found is False:
                 if update_key is not None and not self.__does_key_match_answer_dictionary(update_key):
                     raise ValueError("The given key does not match the existing key set.")
                 updated = MySQLDatabase().update_tbl_answers(update_key, update_dict, update_all)
             if updated:
                 self.__update_answer_list(index, update_all, update_key, update_dict)
+        return updated
 
     def __update_answer_list(self, index=int, update_all=bool, update_key=None, update_dict=dict):
         """
