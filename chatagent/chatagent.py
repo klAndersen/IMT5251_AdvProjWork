@@ -168,6 +168,7 @@ class ChatAgentXBlock(XBlock):
         title = ""
         read_more = ""
         asked_by_user = True
+        disable_link = False
         edx_question_id = None
         use_adv_search = False
         user_input = data['user_input']
@@ -206,6 +207,7 @@ class ChatAgentXBlock(XBlock):
                              "<input id='answer_index' class='answer_index' name='answer_index'"
                              "value='" + str(answer_index) + "' type='hidden'></div>"
                              if len(answer_body) > self.__ANSWER_TEXT_LENGTH else "")
+                disable_link = True
             else:
                 response = "No results matching this question."
         except AttributeError, err:
@@ -215,6 +217,7 @@ class ChatAgentXBlock(XBlock):
             'title': title,
             'response': response,
             'read_more': read_more,
+            'disable_link': disable_link
         }
         return results_dict
 

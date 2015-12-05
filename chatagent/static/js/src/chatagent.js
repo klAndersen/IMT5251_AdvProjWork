@@ -138,13 +138,19 @@ function ChatAgentXBlock(runtime, element) {
         var chatLog = "";
         var response = "";
         var readMore = "";
+        var disableLink = false;
         //create JSON format for input
         var json_input = {'user_input': input};
         invoke('handle_user_input', json_input, function (data) {
             title = data['title'];
             response = data['response'];
             readMore = data['read_more'];
-            response = $(response + " a:first").text();
+            disableLink = data['disable_link'];
+            //check if links should be removed, and if the answer contains hyperlink
+            if (disableLink && response.indexOf("<a ") >= 0) {
+                //remove first occurrence of <a>
+                response = $(response + " a:first").text();
+            } //if
             chatLog = CHAT_AGENT_NAME + title + response + readMore;
             //using <br /> for extra space between question/answer
             chatLog += "<br />";
