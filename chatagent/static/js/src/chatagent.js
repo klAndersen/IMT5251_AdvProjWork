@@ -87,6 +87,19 @@ function ChatAgentXBlock(runtime, element) {
     } //getAndSetUsername
 
     /**
+     * Function that removes HTML from the passed input
+     * Taken from:
+     * http://stackoverflow.com/questions/822452/strip-html-from-text-javascript
+     * @param input {string}
+     * @returns {string}
+     */
+    function removeHTMLFromInput(input) {
+        var temp = document.createElement("DIV");
+        temp.innerHTML = input;
+        return temp.textContent || temp.innerText || "";
+    } //removeHTMLFromInput
+
+    /**
      * Updates the chatbox based on the users input.
      * @param screenname {string} User name
      * @param input {string} User input
@@ -104,7 +117,6 @@ function ChatAgentXBlock(runtime, element) {
             is_input_no = (input.toLowerCase() == "n" || input.toLowerCase() == "no");
             is_input_yes = (input.toLowerCase() == "y" || input.toLowerCase() == "yes");
         } //if
-        //add the users input to the chatbot
         $(CHATBOX_ID).append(screenname);
         $(CHATBOX_ID).append(input);
         $(CHATBOX_ID).append(HTML_NEWLINE);
@@ -138,22 +150,23 @@ function ChatAgentXBlock(runtime, element) {
         var chatLog = "";
         var response = "";
         var readMore = "";
-        var disableLink = false;
+        var containsHTML = false;
         //create JSON format for input
         var json_input = {'user_input': input};
         invoke('handle_user_input', json_input, function (data) {
             title = data['title'];
             response = data['response'];
             readMore = data['read_more'];
-            disableLink = data['disable_link'];
-            //check if links should be removed, and if the answer contains hyperlink
-            if (disableLink && response.indexOf("<a ") >= 0) {
-                //remove first occurrence of <a>
-                response = $(response + " a:first").text();
+            containsHTML = data['contains_html'];
+            chatLog = CHAT_AGENT_NAME + title;
+            //does the response contain html? if so, convert to html
+            if (containsHTML) {
+                chatLog += $(response).html();
+            } else {
+                chatLog += response;
             } //if
-            chatLog = CHAT_AGENT_NAME + title + response + readMore;
             //using <br /> for extra space between question/answer
-            chatLog += "<br />";
+            chatLog += readMore + "<br />";
             $(CHATBOX_ID).append(chatLog);
         }); //invoke
     } //processUsersQuestion
@@ -189,6 +202,8 @@ function ChatAgentXBlock(runtime, element) {
     } //invoke
 
     $(function ($) {
+        //disables the chatbox so input cannot be entered
+        $(CHATBOX_ID).attr("contentEditable", false);
         //get the username and set focus in the message field
         getAndSetUsername();
         $(USER_INPUT_FIELD_ID).focus();
@@ -205,9 +220,11 @@ function ChatAgentXBlock(runtime, element) {
         //send a new message to the chat agent
         $('#btnSubmit').click(function() {
             var input = $(USER_INPUT_FIELD_ID).val();
+            //remove potential html tags from input
+            input = removeHTMLFromInput(input);
+            console.log(input);
             var screenname = USER_NAME + ": ";
             if (input != "") {
-                input = $(USER_INPUT_FIELD_ID).val();
                 updateChatLog(screenname, input);
                 $(USER_INPUT_FIELD_ID).attr('value', "");
                 $(USER_INPUT_FIELD_ID).focus();

@@ -168,7 +168,7 @@ class ChatAgentXBlock(XBlock):
         title = ""
         read_more = ""
         asked_by_user = True
-        disable_link = False
+        contains_html = False
         edx_question_id = None
         use_adv_search = False
         user_input = data['user_input']
@@ -192,6 +192,7 @@ class ChatAgentXBlock(XBlock):
                 # just retrieve the first result - this will be updated in master thesis version
                 answer_list = search_stackexchange.get_question_data(0)
                 if len(answer_list) > 0:
+                    contains_html = True
                     answer_body = self.__retrieve_answer(True, answer_list, res_obj.get_link(), question_id)
                 else:
                     answer_body = "No answers were found for this question."
@@ -207,7 +208,6 @@ class ChatAgentXBlock(XBlock):
                              "<input id='answer_index' class='answer_index' name='answer_index'"
                              "value='" + str(answer_index) + "' type='hidden'></div>"
                              if len(answer_body) > self.__ANSWER_TEXT_LENGTH else "")
-                disable_link = True
             else:
                 response = "No results matching this question."
         except AttributeError, err:
@@ -217,7 +217,7 @@ class ChatAgentXBlock(XBlock):
             'title': title,
             'response': response,
             'read_more': read_more,
-            'disable_link': disable_link
+            'contains_html': contains_html
         }
         return results_dict
 
