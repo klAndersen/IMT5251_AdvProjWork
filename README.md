@@ -13,4 +13,5 @@ API calls between the prototype and StackExchange is achieved by using Py-StackE
 3. Download this repository and install it to XBlock-SDK by running the following commands: 
   * pip install -e IMT5251_AdvProjWork
   * python xblock-sdk/manage.py syncdb
-  * python xblock-sdk/manage.py runserver
+  * Since the prototype relies on MySQL, you need a database. Just remove the '.example' from the "dbconfig.py.example", and add your own values. The database can be created by using the script 'create_db.sql'.
+  * After database is setup, start the Django server: python xblock-sdk/manage.py runserver
